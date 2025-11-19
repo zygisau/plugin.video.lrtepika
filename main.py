@@ -25,6 +25,96 @@ import xbmcplugin
 from xbmcaddon import Addon
 from xbmcvfs import translatePath
 
+import urllib.request, json 
+from typing import TypedDict, Literal, NotRequired
+
+class Tenant(TypedDict):
+    uid: str
+
+class Image(TypedDict):
+    url: str
+    templateUrl: str
+
+class Images(TypedDict):
+    NotRequired["16x9"]: list[Image]
+    NotRequired["1x1"]: list[Image]
+    NotRequired["3x4"]: list[Image]
+
+class MainCategory(TypedDict):
+    id: int
+    name: str
+    seoName: str
+    seoNameSingular: str
+    slug: str
+    adult: bool
+    type: str
+
+class DisplaySchedule(TypedDict):
+    since: str  # ISO 8601 datetime
+    till: NotRequired[str]  # ISO 8601 datetime, optional
+    type: str
+
+class VodItem(TypedDict):
+    type_: str
+    id: int
+    publicUid: str
+    title: str
+    lead: str
+    rating: NotRequired[int]
+    ratingEmbedded: bool
+    type: str
+    uhd: bool
+    displayActive: bool
+    since: str
+    till: NotRequired[str]
+    images: Images
+    mainCategory: MainCategory
+    displaySchedules: list[DisplaySchedule]
+    webUrl: str
+    trailer: bool
+    titleTreatmentImages: dict  # Empty dict in example
+    tenant: Tenant
+    payable: bool
+    duration: int
+    year: int
+    originalTitle: NotRequired[str]
+    hd: bool
+    showRecommendations: bool
+    loginRequired: bool
+    artworks: NotRequired[Images]
+    audio: bool
+    video: bool
+    kmsManagement: bool
+    slug: str
+
+class SectionElement(TypedDict):
+    id: int
+    since: str  # ISO 8601 datetime
+    item: VodItem
+    rank: int
+
+class Section(TypedDict):
+    id: int
+    title: str
+    type: str
+    images: dict  # Empty dict in example
+    webUrl: str
+    tenant: Tenant
+    contentType: str
+    layout: str
+    tilesAspect: str
+    tilesSize: str
+    elements: list[SectionElement]
+    banner: dict  # Empty dict in example
+    showTitle: bool
+    presentationTime: int
+    showTileTitle: bool
+    tilesActivity: str
+    slug: str
+
+SectionList = list[Section]
+
+
 # Get the plugin url in plugin:// notation.
 URL = sys.argv[0]
 # Get a plugin handle as an integer number.
@@ -53,7 +143,7 @@ def get_url(**kwargs):
     return f'{URL}?{urlencode(kwargs)}'
 
 
-def get_genres():
+def get_genres() -> SectionList:
     """
     Get the list of video genres
 
@@ -63,11 +153,12 @@ def get_genres():
     :return: The list of video genres
     :rtype: list
     """
-    with MOVIES_INFO_PATH.open('r', encoding='utf-8') as fo:
-        return json.load(fo)
+    with urllib.request.urlopen("https://epika.lrt.lt/api/products/sections/filmai?elementsLimit=30&lang=LIT&platform=BROWSER&maxResults=5") as url:
+        return json.loads(url.read().decode())
 
 
-def get_videos(genre_index):
+
+def get_videos(genre_index) -> list[VodItem]:
     """
     Get the list of videofiles/streams.
 
@@ -79,7 +170,10 @@ def get_videos(genre_index):
     :return: the list of videos in the category
     :rtype: list
     """
-    return get_genres()[genre_index]
+    # https://epika.lrt.lt/api/products/vods?firstResult=0&maxResults=100&mainCategoryId[]=<ID>&lang=LIT&platform=BROWSER with <ID> being genre_index
+    with urllib.request.urlopen(f"https://epika.lrt.lt/api/products/vods?firstResult=0&maxResults=100&mainCategoryId[]={genre_index}&lang=LIT&platform=BROWSER") as url:
+        data: VodResponse = json.loads(url.read().decode())
+        return data['items']
 
 
 def list_genres():
@@ -97,13 +191,13 @@ def list_genres():
     # Iterate through genres
     for index, genre_info in enumerate(genres):
         # Create a list item with a text label.
-        list_item = xbmcgui.ListItem(label=genre_info['genre'])
+        list_item = xbmcgui.ListItem(label=genre_info['title'])
         # Set images for the list item.
         # Convert Path objects to str because Kodi API accepts only str.
-        list_item.setArt({
-            'icon': str(ICONS_DIR / genre_info['icon']),
-            'fanart': str(FANART_DIR / genre_info['fanart']),
-        })
+        # list_item.setArt({
+            # 'icon': str(ICONS_DIR / genre_info['icon']),
+            # 'fanart': str(FANART_DIR / genre_info['fanart']),
+        # })
         # Set additional info for the list item using its InfoTag.
         # InfoTag allows to set various information for an item.
         # For available properties and methods see the following link:
@@ -111,8 +205,8 @@ def list_genres():
         # 'mediatype' is needed for a skin to display info for this ListItem correctly.
         info_tag = list_item.getVideoInfoTag()
         info_tag.setMediaType('video')
-        info_tag.setTitle(genre_info['genre'])
-        info_tag.setGenres([genre_info['genre']])
+        info_tag.setTitle(genre_info['title']+ f'_{genre_info["id"]}')
+        info_tag.setGenres([genre_info['title']])
         # Create a URL for a plugin recursive call.
         # Example: plugin://plugin.video.example/?action=listing&genre_index=0
         url = get_url(action='listing', genre_index=index)
@@ -133,37 +227,38 @@ def list_videos(genre_index):
     :param genre_index: the index of genre in the list of movie genres
     :type genre_index: int
     """
-    genre_info = get_videos(genre_index)
+    genre: Section = get_genres()[genre_index]
+    
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
-    xbmcplugin.setPluginCategory(HANDLE, genre_info['genre'])
+    xbmcplugin.setPluginCategory(HANDLE, genre['title'])
     # Set plugin content. It allows Kodi to select appropriate views
     # for this type of content.
     xbmcplugin.setContent(HANDLE, 'movies')
     # Get the list of videos in the category.
-    videos = genre_info['movies']
     # Iterate through videos.
+    videos: list[SectionElement] = genre['elements']
     for video in videos:
         # Create a list item with a text label
-        list_item = xbmcgui.ListItem(label=video['title'])
+        list_item = xbmcgui.ListItem(label=video['item']['title'])
         # Set graphics (thumbnail, fanart, banner, poster, landscape etc.) for the list item.
         # Here we use only poster for simplicity's sake.
         # In a real-life plugin you may need to set multiple image types.
-        list_item.setArt({'poster': video['poster']})
+        list_item.setArt({'poster': 'https:'+video['item']['images']['16x9'][0]['url']})
         # Set additional info for the list item via InfoTag.
         # 'mediatype' is needed for skin to display info for this ListItem correctly.
         info_tag = list_item.getVideoInfoTag()
         info_tag.setMediaType('movie')
-        info_tag.setTitle(video['title'])
-        info_tag.setGenres([genre_info['genre']])
-        info_tag.setPlot(video['plot'])
-        info_tag.setYear(video['year'])
+        info_tag.setTitle(video['item']['title'])
+        info_tag.setGenres([video['item']['mainCategory']['name']])
+        info_tag.setPlot(video['item']['lead'])
+        info_tag.setYear(video['item']['year'])
         # Set 'IsPlayable' property to 'true'.
         # This is mandatory for playable items!
         list_item.setProperty('IsPlayable', 'true')
         # Create a URL for a plugin recursive call.
         # Example: plugin://plugin.video.example/?action=play&video=https%3A%2F%2Fia600702.us.archive.org%2F3%2Fitems%2Firon_mask%2Firon_mask_512kb.mp4
-        url = get_url(action='play', video=video['url'])
+        url = get_url(action='play', video=video['item']['webUrl'])
         # Add the list item to a virtual Kodi folder.
         # is_folder = False means that this item won't open any sub-list.
         is_folder = False
