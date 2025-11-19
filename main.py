@@ -20,8 +20,11 @@ import sys
 from pathlib import Path
 from urllib.parse import urlencode, parse_qsl
 
+import requests
+import xbmc
 import xbmcgui
 import xbmcplugin
+import xbmcaddon
 from xbmcaddon import Addon
 from xbmcvfs import translatePath
 
@@ -258,7 +261,7 @@ def list_videos(genre_index):
         list_item.setProperty('IsPlayable', 'true')
         # Create a URL for a plugin recursive call.
         # Example: plugin://plugin.video.example/?action=play&video=https%3A%2F%2Fia600702.us.archive.org%2F3%2Fitems%2Firon_mask%2Firon_mask_512kb.mp4
-        url = get_url(action='play', video=video['item']['webUrl'])
+        url = get_url(action='play', video=video['item']['id'])
         # Add the list item to a virtual Kodi folder.
         # is_folder = False means that this item won't open any sub-list.
         is_folder = False
@@ -287,6 +290,164 @@ def play_video(path):
     xbmcplugin.setResolvedUrl(HANDLE, True, listitem=play_item)
 
 
+# Addon info
+ADDON = xbmcaddon.Addon()
+ADDON_ID = ADDON.getAddonInfo('id')
+ADDON_NAME = ADDON.getAddonInfo('name')
+ADDON_PATH = ADDON.getAddonInfo('path')
+
+# API Configuration
+BASE_URL = "https://epika.lrt.lt/api"
+TENANT_UID = "Lh8t"
+PLATFORM = "BROWSER"
+LANG = "LIT"
+class LRTEpikaAPI:
+    """API client for LRT Epika"""
+    
+    @staticmethod
+    def get_categories():
+        """Get available categories"""
+        url = f"{BASE_URL}/items/categories"
+        params = {"lang": LANG, "platform": PLATFORM}
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            xbmc.log(f"LRT Epika: Error getting categories: {e}", xbmc.LOGERROR)
+            return []
+    
+    @staticmethod
+    def get_video_info(video_id):
+        """Get video information"""
+        url = f"{BASE_URL}/products/vods/{video_id}"
+        params = {"lang": LANG, "platform": PLATFORM}
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            xbmc.log(f"LRT Epika: Error getting video info: {e}", xbmc.LOGERROR)
+            return None
+    
+    @staticmethod
+    def get_playlist(video_id, video_type="MOVIE"):
+        """Get playlist with stream URLs"""
+        url = f"{BASE_URL}/products/{video_id}/videos/playlist"
+        params = {
+            "videoType": video_type,
+            "platform": PLATFORM,
+            "tenantUid": TENANT_UID
+        }
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            xbmc.log(f"LRT Epika: Error getting playlist: {e}", xbmc.LOGERROR)
+            return None
+
+
+def play_video_ai(video_id, video_type='MOVIE'):
+    """Play a video with DRM support"""
+    xbmc.log(f"LRT Epika: Attempting to play video {video_id}", xbmc.LOGINFO)
+    
+    # Get playlist info
+    playlist_data = LRTEpikaAPI.get_playlist(video_id, video_type)
+    
+    if not playlist_data:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'Failed to get stream information',
+            xbmcgui.NOTIFICATION_ERROR
+        )
+        return
+    
+    # Extract stream URLs
+    sources = playlist_data.get('sources', {})
+    drm = playlist_data.get('drm', {})
+    
+    # Prefer DASH for DRM support
+    dash_url = None
+    if 'DASH' in sources and sources['DASH']:
+        dash_url = sources['DASH'][0].get('src', '')
+        if dash_url.startswith('//'):
+            dash_url = 'https:' + dash_url
+    
+    if not dash_url:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'No DASH stream available',
+            xbmcgui.NOTIFICATION_ERROR
+        )
+        return
+    
+    # Get Widevine license URL
+    widevine_url = drm.get('WIDEVINE', {}).get('src', '')
+    
+    xbmc.log(f"LRT Epika: DASH URL: {dash_url}", xbmc.LOGINFO)
+    xbmc.log(f"LRT Epika: Widevine URL: {widevine_url}", xbmc.LOGINFO)
+    
+    # Create play item
+    play_item = xbmcgui.ListItem(path=dash_url)
+    
+    # Get video info for metadata
+    video_info = LRTEpikaAPI.get_video_info(video_id)
+    if video_info:
+        info_tag = play_item.getVideoInfoTag()
+        info_tag.setTitle(video_info.get('title', 'Unknown'))
+        info_tag.setPlot(video_info.get('description', ''))
+        info_tag.setDuration(video_info.get('duration', 0))
+    
+    # Configure inputstream.adaptive for DRM playback
+    play_item.setProperty('inputstream', 'inputstream.adaptive')
+    play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
+    
+    # # Limit to 720p for better Raspberry Pi performance
+    # play_item.setProperty('inputstream.adaptive.max_resolution_width', '1280')
+    # play_item.setProperty('inputstream.adaptive.max_resolution_height', '720')
+    
+    # # Force software decoding on Raspberry Pi to avoid DRMPRIME issues
+    # play_item.setProperty('inputstream.adaptive.stream_selection_type', 'adaptive')
+    # play_item.setMimeType('application/dash+xml')
+    
+    if widevine_url:
+        # DRM configuration with proper headers
+        license_headers = 'Content-Type=application/octet-stream'
+        
+        # Add cookies if configured
+        cookie_string = ADDON.getSetting('cookies')
+        if cookie_string:
+            license_headers += f'&Cookie={cookie_string}'
+        
+        # License key format: URL|headers|post_data|response_data
+        license_key = f'{widevine_url}|{license_headers}|R{{SSM}}|'
+        
+        play_item.setProperty('inputstream.adaptive.license_type', 'com.widevine.alpha')
+        play_item.setProperty('inputstream.adaptive.license_key', license_key)
+        xbmc.log(f"LRT Epika: License key configured", xbmc.LOGINFO)
+    else:
+        xbmc.log("LRT Epika: No DRM license URL found", xbmc.LOGWARNING)
+    
+    
+    # Add subtitles if available
+    subtitles = playlist_data.get('subtitles', [])
+    if subtitles:
+        subtitle_urls = []
+        for sub in subtitles:
+            url = sub.get('url', '')
+            if url.startswith('//'):
+                url = 'https:' + url
+            subtitle_urls.append(url)
+        
+        if subtitle_urls:
+            play_item.setSubtitles(subtitle_urls)
+            xbmc.log(f"LRT Epika: Added {len(subtitle_urls)} subtitle(s)", xbmc.LOGINFO)
+    
+    # Play the video
+    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
+
+
 def router(paramstring):
     """
     Router function that calls other functions
@@ -308,7 +469,7 @@ def router(paramstring):
         list_videos(int(params['genre_index']))
     elif params['action'] == 'play':
         # Play a video from a provided URL.
-        play_video(params['video'])
+        play_video_ai(params['video'])
     else:
         # If the provided paramstring does not contain a supported action
         # we raise an exception. This helps to catch coding errors,
