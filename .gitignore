@@ -2,12 +2,22 @@
 __pycache__/
 *.py[codz]
 *$py.class
+# Created by .gitignore support plugin (hsz.mobi)
+### Python template
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
 
 # C extensions
 *.so
 
 # Distribution / packaging
 .Python
+.env
+env/
+.venv/
+venv/
+venv2/
 build/
 develop-eggs/
 dist/
@@ -25,6 +35,14 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+#lib/
+#lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -50,6 +68,10 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
 
 # Translations
 *.mo
@@ -205,3 +227,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+target/
+
+# PyCharm project files
+.idea/
+
+*.zip
