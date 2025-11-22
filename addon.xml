@@ -7,6 +7,9 @@ provider-name="Roman_V_M">
   <import addon="xbmc.python" version="3.0.1"/>
   <import addon="script.module.requests" version="2.31.0"/>
   <import addon="inputstream.adaptive" version="20.3.18"/>
+  <import addon="script.module.httpx" version="0.23.0"/>
+  <import addon="script.module.attrs" version="22.2.0"/>
+  <import addon="script.module.python.dateutil" version="2.8.0"/>
 </requires>
 <extension point="xbmc.python.pluginsource" library="main.py">
   <provides>video</provides>
