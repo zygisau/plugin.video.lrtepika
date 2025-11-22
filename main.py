@@ -15,12 +15,24 @@
 """
 Example video plugin that is compatible with Kodi 20.x "Nexus" and above
 """
-import json
+# Add resources/lib directory to Python path for third-party packages
 import sys
 from pathlib import Path
+
+_addon_dir = Path(__file__).resolve().parent
+_lib_path = _addon_dir / 'resources' / 'lib'
+if str(_lib_path) not in sys.path:
+    sys.path.insert(0, str(_lib_path))
+
+import json
 from urllib.parse import urlencode, parse_qsl
 
 import requests
+from resources.lib.httpx._config import UNSET
+from resources.lib.lrt_epika_api_client.types import Unset
+from resources.lib.lrt_epika_api_client.models.category_type import CategoryType
+from resources.lib.lrt_epika_api_client.models.category import Category
+from resources.lib.lrt_epika_api_client.models.movie_type import MovieType
 import xbmc
 import xbmcgui
 import xbmcplugin
@@ -134,6 +146,11 @@ FANART_DIR = ADDON_PATH / 'resources' / 'images' / 'fanart'
 
 MOVIES_INFO_PATH = ADDON_PATH / 'movies.json'
 
+from resources.lib.lrt_epika_api_client import Client
+from resources.lib.lrt_epika_api_client.api.categories import get_categories
+from resources.lib.lrt_epika_api_client.api.products import get_season_episodes, get_serial_seasons, get_vods
+
+client = Client(base_url="https://epika.lrt.lt/api")
 
 def get_url(**kwargs):
     """
@@ -146,7 +163,7 @@ def get_url(**kwargs):
     return f'{URL}?{urlencode(kwargs)}'
 
 
-def get_genres() -> SectionList:
+def get_categories_internal() -> list[Category]:
     """
     Get the list of video genres
 
@@ -156,10 +173,31 @@ def get_genres() -> SectionList:
     :return: The list of video genres
     :rtype: list
     """
-    with urllib.request.urlopen("https://epika.lrt.lt/api/products/sections/filmai?elementsLimit=30&lang=LIT&platform=BROWSER&maxResults=5") as url:
-        return json.loads(url.read().decode())
+    data = [
+            Category(268, "Filmai", 'filmai', False, CategoryType.VOD, 'filmai', 'filmas'),
+            Category(304, "Serialai", 'serialai', False, CategoryType.VOD, 'serialai', 'serialas'),
+    ]
+    return data
 
+def get_sub_categories_internal(category_id: int):
+    """
+    Get the list of video genres
 
+    Here you can insert some code that retrieves
+    the list of video sections (in this case movie genres) from some site or API.
+
+    :return: The list of video genres
+    :rtype: list
+    """
+    data = get_categories.sync(client=client, main_category_id=category_id)
+    return data
+
+def get_vods_internal(category_id: int, subcategory_id: int):
+    data = get_vods.sync(client=client, main_category_id=[category_id], category_id=[subcategory_id], max_results=100)
+    return data
+    
+def get_sub_category_internal(subcategory_id: int) -> Category:
+    return Category(0, "Not implemented", 'unknown', False, CategoryType.VOD, 'unknown', 'unknown')
 
 def get_videos(genre_index) -> list[VodItem]:
     """
@@ -175,11 +213,14 @@ def get_videos(genre_index) -> list[VodItem]:
     """
     # https://epika.lrt.lt/api/products/vods?firstResult=0&maxResults=100&mainCategoryId[]=<ID>&lang=LIT&platform=BROWSER with <ID> being genre_index
     with urllib.request.urlopen(f"https://epika.lrt.lt/api/products/vods?firstResult=0&maxResults=100&mainCategoryId[]={genre_index}&lang=LIT&platform=BROWSER") as url:
-        data: VodResponse = json.loads(url.read().decode())
+        data = json.loads(url.read().decode())
         return data['items']
 
+def get_series_internal(serial_id: int):
+    data = get_serial_seasons.sync(client=client, serial_id=serial_id)
+    return data
 
-def list_genres():
+def list_categories():
     """
     Create the list of movie genres in the Kodi interface.
     """
@@ -190,11 +231,18 @@ def list_genres():
     # for this type of content.
     xbmcplugin.setContent(HANDLE, 'movies')
     # Get movie genres
-    genres = get_genres()
+    categories = get_categories_internal()
+    if not categories:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'Failed to get categories',
+            xbmcgui.NOTIFICATION_ERROR
+        )
+        return
     # Iterate through genres
-    for index, genre_info in enumerate(genres):
+    for index, category in enumerate(categories):
         # Create a list item with a text label.
-        list_item = xbmcgui.ListItem(label=genre_info['title'])
+        list_item = xbmcgui.ListItem(label=category.name)
         # Set images for the list item.
         # Convert Path objects to str because Kodi API accepts only str.
         # list_item.setArt({
@@ -208,11 +256,11 @@ def list_genres():
         # 'mediatype' is needed for a skin to display info for this ListItem correctly.
         info_tag = list_item.getVideoInfoTag()
         info_tag.setMediaType('video')
-        info_tag.setTitle(genre_info['title']+ f'_{genre_info["id"]}')
-        info_tag.setGenres([genre_info['title']])
+        info_tag.setTitle(category.name)
+        info_tag.setGenres([category.name])
         # Create a URL for a plugin recursive call.
-        # Example: plugin://plugin.video.example/?action=listing&genre_index=0
-        url = get_url(action='listing', genre_index=index)
+        # Example: plugin://plugin.video.example/?action=listing&category=0
+        url = get_url(action='categories', category=category.id)
         # is_folder = True means that this item opens a sub-list of lower level items.
         is_folder = True
         # Add our item to the Kodi virtual folder listing.
@@ -222,49 +270,94 @@ def list_genres():
     # Finish creating a virtual folder.
     xbmcplugin.endOfDirectory(HANDLE)
 
-
-def list_videos(genre_index):
-    """
-    Create the list of playable videos in the Kodi interface.
-
-    :param genre_index: the index of genre in the list of movie genres
-    :type genre_index: int
-    """
-    genre: Section = get_genres()[genre_index]
+def list_sub_categories(category_id: int):
+    xbmcplugin.setPluginCategory(HANDLE, 'Public Domain Movies')
+    xbmcplugin.setContent(HANDLE, 'movies')
+    subcategories = get_sub_categories_internal(category_id)
     
+    if not subcategories:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'Failed to get sub-categories',
+            xbmcgui.NOTIFICATION_ERROR
+        )
+        return
+    
+    for index, subcategory in enumerate(subcategories):
+        list_item = xbmcgui.ListItem(label=subcategory.name)
+
+        info_tag = list_item.getVideoInfoTag()
+        info_tag.setMediaType('video')
+        info_tag.setTitle(subcategory.name)
+        info_tag.setGenres([subcategory.name])
+        url = get_url(action='listing', category=category_id, subcategory=subcategory.id)
+        is_folder = True
+        xbmcplugin.addDirectoryItem(HANDLE, url, list_item, is_folder)
+    xbmcplugin.addSortMethod(HANDLE, xbmcplugin.SORT_METHOD_LABEL_IGNORE_THE)
+    xbmcplugin.endOfDirectory(HANDLE)
+
+
+def list_videos(category_id: int, subcategory_id: int):
+    page = get_vods_internal(category_id, subcategory_id)
+    subcategory = get_sub_category_internal(subcategory_id)
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
-    xbmcplugin.setPluginCategory(HANDLE, genre['title'])
+    xbmcplugin.setPluginCategory(HANDLE, subcategory.name)
     # Set plugin content. It allows Kodi to select appropriate views
     # for this type of content.
     xbmcplugin.setContent(HANDLE, 'movies')
     # Get the list of videos in the category.
     # Iterate through videos.
-    videos: list[SectionElement] = genre['elements']
-    for video in videos:
+    
+    if not page:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'Failed to get videos',
+            xbmcgui.NOTIFICATION_ERROR
+        )
+        return
+    
+    videos = page.items
+    if not videos:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'No videos found in this category',
+            xbmcgui.NOTIFICATION_INFO
+        )
+        return
+
+    for i in range(len(videos)):
+        video = videos[i]
+        
         # Create a list item with a text label
-        list_item = xbmcgui.ListItem(label=video['item']['title'])
+        list_item = xbmcgui.ListItem(label=video.title)
         # Set graphics (thumbnail, fanart, banner, poster, landscape etc.) for the list item.
         # Here we use only poster for simplicity's sake.
         # In a real-life plugin you may need to set multiple image types.
-        list_item.setArt({'poster': 'https:'+video['item']['images']['16x9'][0]['url']})
+        
+        list_item.setArt({'poster': f'https:{video.images.field_16x9[0].url}'}) # type: ignore
         # Set additional info for the list item via InfoTag.
         # 'mediatype' is needed for skin to display info for this ListItem correctly.
         info_tag = list_item.getVideoInfoTag()
         info_tag.setMediaType('movie')
-        info_tag.setTitle(video['item']['title'])
-        info_tag.setGenres([video['item']['mainCategory']['name']])
-        info_tag.setPlot(video['item']['lead'])
-        info_tag.setYear(video['item']['year'])
+        info_tag.setTitle(video.title)
+        # log
+        info_tag.setGenres(["video.main_category.name"])
+        info_tag.setPlot("video.lead")
+        info_tag.setYear(video.year)
         # Set 'IsPlayable' property to 'true'.
         # This is mandatory for playable items!
         list_item.setProperty('IsPlayable', 'true')
         # Create a URL for a plugin recursive call.
         # Example: plugin://plugin.video.example/?action=play&video=https%3A%2F%2Fia600702.us.archive.org%2F3%2Fitems%2Firon_mask%2Firon_mask_512kb.mp4
-        url = get_url(action='play', video=video['item']['id'])
-        # Add the list item to a virtual Kodi folder.
-        # is_folder = False means that this item won't open any sub-list.
-        is_folder = False
+        if video.type_ == MovieType.MOVIE:
+            url = get_url(action='play', video=video.id)
+            # Add the list item to a virtual Kodi folder.
+            # is_folder = False means that this item won't open any sub-list.
+            is_folder = False
+        else:
+            url = get_url(action='serial', category=category_id, subcategory=subcategory_id, video_id=video.id)
+            is_folder = True
         # Add our item to the Kodi virtual folder listing.
         xbmcplugin.addDirectoryItem(HANDLE, url, list_item, is_folder)
     # Add sort methods for the virtual folder items
@@ -273,6 +366,67 @@ def list_videos(genre_index):
     # Finish creating a virtual folder.
     xbmcplugin.endOfDirectory(HANDLE)
 
+
+def list_episodes(serial_id: int, season_id: int):
+    """
+    List episodes in a series season
+    """
+    xbmcplugin.setPluginCategory(HANDLE, 'Episodes')
+    xbmcplugin.setContent(HANDLE, 'movies')
+    
+    season_data = get_season_episodes.sync(client=client, serial_id=serial_id, season_id=season_id)
+    if not season_data:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'Failed to get episodes',
+            xbmcgui.NOTIFICATION_ERROR
+        )
+        return
+    
+    for episode in season_data:
+        list_item = xbmcgui.ListItem(label=episode.title)
+        info_tag = list_item.getVideoInfoTag()
+        info_tag.setMediaType('movie')
+        info_tag.setTitle(episode.title)
+        url = get_url(action='play', video=episode.id)
+        is_folder = False
+        list_item.setProperty('IsPlayable', 'true')
+        xbmcplugin.addDirectoryItem(HANDLE, url, list_item, is_folder)
+    
+    xbmcplugin.addSortMethod(HANDLE, xbmcplugin.SORT_METHOD_LABEL_IGNORE_THE)
+    xbmcplugin.endOfDirectory(HANDLE)
+    
+
+def list_series(category_id: int, subcategory_id: int, video_id: int):
+    """
+    List series episodes
+    """
+    subcategory = get_sub_category_internal(subcategory_id)
+    xbmcplugin.setPluginCategory(HANDLE, subcategory.name)
+    xbmcplugin.setContent(HANDLE, 'movies')
+    
+    series = get_series_internal(video_id)
+    
+    if not series:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'Failed to get series info',
+            xbmcgui.NOTIFICATION_ERROR
+        )
+        return
+    
+    for season in series:
+        list_item = xbmcgui.ListItem(label=season.title)
+        info_tag = list_item.getVideoInfoTag()
+        info_tag.setMediaType('movie')
+        info_tag.setTitle(season.title)
+        # this will be another folder
+        url = get_url(action='episodes', serial_id=video_id, season_id=season.id)
+        is_folder = True
+        xbmcplugin.addDirectoryItem(HANDLE, url, list_item, is_folder)
+        
+    xbmcplugin.addSortMethod(HANDLE, xbmcplugin.SORT_METHOD_LABEL_IGNORE_THE)
+    xbmcplugin.endOfDirectory(HANDLE)
 
 def play_video(path):
     """
@@ -463,10 +617,18 @@ def router(paramstring):
     if not params:
         # If the plugin is called from Kodi UI without any parameters,
         # display the list of video categories
-        list_genres()
+        list_categories()
+    elif params['action'] == 'categories':
+        # Display the list of categories (genres)
+        list_sub_categories(params['category'])
     elif params['action'] == 'listing':
         # Display the list of videos in a provided category.
-        list_videos(int(params['genre_index']))
+        list_videos(int(params['category']), int(params['subcategory']))
+    elif params['action'] == 'serial':
+        list_series(int(params['category']), int(params['subcategory']), int(params['video_id']))
+    elif params['action'] == 'episodes':
+        # Display the list of episodes in a provided series season.
+        list_episodes(int(params['serial_id']), int(params['season_id']))
     elif params['action'] == 'play':
         # Play a video from a provided URL.
         play_video_ai(params['video'])

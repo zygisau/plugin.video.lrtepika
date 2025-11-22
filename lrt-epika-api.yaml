@@ -329,6 +329,189 @@ paths:
         '404':
           description: VOD item not found
 
+  /products/vods/serials/{serialId}:
+    get:
+      tags:
+        - Products
+      summary: Get serial details
+      description: Get detailed information about a TV series
+      operationId: getSerialById
+      parameters:
+        - name: serialId
+          in: path
+          description: Serial ID
+          required: true
+          schema:
+            type: integer
+            example: 898237
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+      responses:
+        '200':
+          description: Serial details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SerialDetail'
+        '403':
+          description: Forbidden
+        '404':
+          description: Serial not found
+
+  /products/vods/serials/{serialId}/seasons:
+    get:
+      tags:
+        - Products
+      summary: Get serial seasons
+      description: Get list of all seasons for a TV series
+      operationId: getSerialSeasons
+      parameters:
+        - name: serialId
+          in: path
+          description: Serial ID
+          required: true
+          schema:
+            type: integer
+            example: 898237
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+      responses:
+        '200':
+          description: List of seasons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SeasonSummary'
+        '403':
+          description: Forbidden
+        '404':
+          description: Serial not found
+
+  /products/vods/serials/{serialId}/seasons/{seasonId}/episodes:
+    get:
+      tags:
+        - Products
+      summary: Get season episodes
+      description: Get list of all episodes in a season
+      operationId: getSeasonEpisodes
+      parameters:
+        - name: serialId
+          in: path
+          description: Serial ID
+          required: true
+          schema:
+            type: integer
+            example: 898237
+        - name: seasonId
+          in: path
+          description: Season ID
+          required: true
+          schema:
+            type: integer
+            example: 898257
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+      responses:
+        '200':
+          description: List of episodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Episode'
+        '403':
+          description: Forbidden
+        '404':
+          description: Serial or season not found
+
+  /products/vods/seasons/{seasonId}/detail:
+    get:
+      tags:
+        - Products
+      summary: Get season details
+      description: Get detailed information about a season including parent serial
+      operationId: getSeasonDetail
+      parameters:
+        - name: seasonId
+          in: path
+          description: Season ID
+          required: true
+          schema:
+            type: integer
+            example: 898257
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+      responses:
+        '200':
+          description: Season details with serial information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeasonDetail'
+        '403':
+          description: Forbidden
+        '404':
+          description: Season not found
+
   /products/{productId}/videos/player/configuration:
     get:
       tags:
@@ -850,7 +1033,7 @@ components:
           type: boolean
         type:
           type: string
-          enum: [SERIAL]
+          enum: [SERIAL, VOD]
           description: Content type discriminator
         uhd:
           type: boolean
@@ -886,6 +1069,246 @@ components:
         webUrl:
           type: string
           format: uri
+
+    SerialDetail:
+      allOf:
+        - $ref: '#/components/schemas/Serial'
+        - type: object
+          properties:
+            lead:
+              type: string
+              description: Short description
+            description:
+              type: string
+              description: Full HTML description
+            geoipManualLock:
+              type: boolean
+            genres:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  key:
+                    type: string
+                  name:
+                    type: string
+            tags:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  key:
+                    type: string
+                  name:
+                    type: string
+            platforms:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    enum: [SMART_TV, ANDROID_TV, APPLE_TV, ANDROID, BROWSER, IOS]
+            displaySchedules:
+              type: array
+              items:
+                $ref: '#/components/schemas/DisplaySchedule'
+            trailer:
+              type: boolean
+            titleTreatmentImages:
+              $ref: '#/components/schemas/ImageSet'
+            payable:
+              type: boolean
+            paymentSchedules:
+              type: array
+              items:
+                type: object
+            promotions:
+              type: array
+              items:
+                type: object
+                nullable: true
+            persons:
+              type: object
+              properties:
+                ACTOR:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Person'
+                SCRIPTWRITER:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Person'
+                COMPOSER:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Person'
+                DIRECTOR:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Person'
+                PRESENTER:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Person'
+                PRODUCER:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Person'
+            gallery:
+              type: object
+            subtitles:
+              type: array
+              items:
+                type: object
+            audioTracks:
+              type: array
+              items:
+                type: object
+
+    SeasonSummary:
+      type: object
+      required:
+        - id
+        - publicUid
+        - title
+        - type
+        - number
+      properties:
+        id:
+          type: integer
+        publicUid:
+          type: string
+          format: uuid
+        externalUid:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          enum: [SEASON]
+        webUrl:
+          type: string
+          format: uri
+        payable:
+          type: boolean
+        paymentSchedules:
+          type: array
+          items:
+            type: object
+        promotions:
+          type: array
+          items:
+            type: object
+            nullable: true
+        number:
+          type: integer
+        display:
+          type: string
+          description: Episode range display (e.g., "1 - 8")
+        artworks:
+          $ref: '#/components/schemas/ImageSet'
+        programmes:
+          type: array
+          items:
+            type: object
+
+    SeasonDetail:
+      type: object
+      required:
+        - id
+        - publicUid
+        - title
+        - type
+        - number
+        - serial
+      properties:
+        id:
+          type: integer
+        publicUid:
+          type: string
+          format: uuid
+        externalUid:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          enum: [SEASON]
+        geoipManualLock:
+          type: boolean
+        webUrl:
+          type: string
+          format: uri
+        payable:
+          type: boolean
+        paymentSchedules:
+          type: array
+          items:
+            type: object
+        number:
+          type: integer
+        artworks:
+          $ref: '#/components/schemas/ImageSet'
+        serial:
+          type: object
+          required:
+            - id
+            - publicUid
+            - title
+            - type
+          properties:
+            id:
+              type: integer
+            publicUid:
+              type: string
+              format: uuid
+            title:
+              type: string
+            lead:
+              type: string
+            active:
+              type: boolean
+            rating:
+              type: integer
+              minimum: 0
+              maximum: 18
+            ratingEmbedded:
+              type: boolean
+            type:
+              type: string
+              enum: [SERIAL]
+            uhd:
+              type: boolean
+            hd:
+              type: boolean
+            since:
+              type: string
+              format: date-time
+            mainCategory:
+              $ref: '#/components/schemas/Category'
+            year:
+              type: integer
+            originalTitle:
+              type: string
+            showRecommendations:
+              type: boolean
+            kmsManagement:
+              type: boolean
+            slug:
+              type: string
+
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
 
     Episode:
       type: object
@@ -948,6 +1371,15 @@ components:
               type: string
         payable:
           type: boolean
+        paymentSchedules:
+          type: array
+          items:
+            type: object
+        promotions:
+          type: array
+          items:
+            type: object
+            nullable: true
         loginRequired:
           type: boolean
         duration:
@@ -962,6 +1394,8 @@ components:
         audio:
           type: boolean
         video:
+          type: boolean
+        downloadAvailable:
           type: boolean
         kmsManagement:
           type: boolean
