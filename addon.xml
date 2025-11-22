@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon id="plugin.video.example"
-version="3.0.2"
+version="3.0.3"
 name="Example Kodi Video Plugin"
 provider-name="Roman_V_M">
 <requires>
   <import addon="xbmc.python" version="3.0.1"/>
   <import addon="script.module.requests" version="2.31.0"/>
   <import addon="inputstream.adaptive" version="20.3.18"/>
-  <import addon="script.module.httpx" version="0.23.0"/>
-  <import addon="script.module.attrs" version="22.2.0"/>
-  <import addon="script.module.python.dateutil" version="2.8.0"/>
 </requires>
 <extension point="xbmc.python.pluginsource" library="main.py">
   <provides>video</provides>
@@ -18,7 +15,7 @@ provider-name="Roman_V_M">
   <summary lang="en_GB">Example Kodi Video Plugin</summary>
   <description lang="en_GB">An example video plugin for Kodi mediacenter.</description>
   <disclaimer lang="en_GB">Public domain movies are provided by publicdomainmovie.net.</disclaimer>
-  <license>GPL-3.0-only	</license>
+  <license>GPL-3.0-only </license>
   <assets>
     <icon>resources/images/icon.png</icon>
     <fanart>resources/images/fanart.jpg</fanart>
