@@ -1,0 +1,1195 @@
+openapi: 3.0.3
+info:
+  title: LRT Epika API
+  description: |
+    API for LRT Epika - Lithuanian national broadcaster's streaming platform.
+    This API provides access to VOD (Video on Demand) content including movies, series, categories, and user-specific data.
+  version: 1.0.0
+  contact:
+    name: LRT
+    url: https://epika.lrt.lt
+
+servers:
+  - url: https://epika.lrt.lt/api
+    description: Production API
+  - url: https://portal-recommender.redge.media/api
+    description: Recommendation service
+
+tags:
+  - name: Categories
+    description: Content categories and genre information
+  - name: Products
+    description: VOD products - movies, series, and episodes
+  - name: Sections
+    description: Curated sections and collections
+  - name: Subscribers
+    description: User-specific data and bookmarks
+  - name: Playback
+    description: Video playback, streaming URLs, and DRM
+  - name: Recommendations
+    description: Personalized content recommendations
+
+paths:
+  /items/categories:
+    get:
+      tags:
+        - Categories
+      summary: Get content categories
+      description: Returns list of available content categories (genres)
+      operationId: getCategories
+      parameters:
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+        - name: mainCategoryId
+          in: query
+          description: Filter by main category ID
+          required: false
+          schema:
+            type: integer
+            example: 268
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '403':
+          description: Forbidden
+
+  /subscribers/detail:
+    get:
+      tags:
+        - Subscribers
+      summary: Get subscriber details
+      description: Returns details about the current subscriber/user
+      operationId: getSubscriberDetail
+      parameters:
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+        - name: hash
+          in: query
+          description: User session hash for authenticated requests
+          required: false
+          schema:
+            type: string
+            example: "7fb28bf2-2a2e-4c0e-acda-ff4eb6a48d43-299044542"
+      responses:
+        '200':
+          description: Subscriber details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscriber'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /subscribers/bookmarks:
+    get:
+      tags:
+        - Subscribers
+      summary: Get user bookmarks
+      description: Returns user's bookmarks (favorites or watched items)
+      operationId: getBookmarks
+      parameters:
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+        - name: hash
+          in: query
+          description: User session hash for authenticated requests
+          required: false
+          schema:
+            type: string
+            example: "7fb28bf2-2a2e-4c0e-acda-ff4eb6a48d43-299044542"
+        - name: type
+          in: query
+          description: Type of bookmarks to retrieve
+          required: true
+          schema:
+            type: string
+            enum: [FAVOURITE, WATCHED]
+      responses:
+        '200':
+          description: List of bookmarked items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookmarkItem'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /products/sections/{sectionName}:
+    get:
+      tags:
+        - Sections
+      summary: Get content sections
+      description: Returns curated content sections for different pages (main, filmai, serialai)
+      operationId: getSections
+      parameters:
+        - name: sectionName
+          in: path
+          description: Section name
+          required: true
+          schema:
+            type: string
+            enum: [main, filmai, serialai]
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+        - name: elementsLimit
+          in: query
+          description: Limit number of elements in each section
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 30
+        - name: firstResult
+          in: query
+          description: Offset for pagination (zero-indexed)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: maxResults
+          in: query
+          description: Maximum number of results to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        '200':
+          description: List of content sections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Section'
+        '403':
+          description: Forbidden
+        '404':
+          description: Section not found
+
+  /products/vods/{vodId}:
+    get:
+      tags:
+        - Products
+      summary: Get VOD item details
+      description: Get detailed information about a specific movie, series, or episode
+      operationId: getVodById
+      parameters:
+        - name: vodId
+          in: path
+          description: VOD item ID
+          required: true
+          schema:
+            type: integer
+            example: 918638
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+      responses:
+        '200':
+          description: VOD item details
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Movie'
+                  - $ref: '#/components/schemas/Serial'
+                  - $ref: '#/components/schemas/Episode'
+        '403':
+          description: Forbidden
+        '404':
+          description: VOD item not found
+
+  /products/vods/{vodId}/sections:
+    get:
+      tags:
+        - Products
+      summary: Get related content sections
+      description: Get sections with related or recommended content for a VOD item
+      operationId: getVodSections
+      parameters:
+        - name: vodId
+          in: path
+          description: VOD item ID
+          required: true
+          schema:
+            type: integer
+            example: 918638
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+      responses:
+        '200':
+          description: List of related content sections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Section'
+        '403':
+          description: Forbidden
+        '404':
+          description: VOD item not found
+
+  /products/{productId}/videos/player/configuration:
+    get:
+      tags:
+        - Playback
+      summary: Get video player configuration
+      description: Get player configuration including playlist URL and tracking info
+      operationId: getPlayerConfiguration
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID
+          required: true
+          schema:
+            type: integer
+            example: 918638
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+        - name: videoType
+          in: query
+          description: Type of video content
+          required: true
+          schema:
+            type: string
+            enum: [MOVIE, EPISODE]
+      responses:
+        '200':
+          description: Player configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerConfiguration'
+        '403':
+          description: Forbidden
+        '404':
+          description: Product not found
+
+  /products/{productId}/videos/playlist:
+    get:
+      tags:
+        - Playback
+      summary: Get video playlist
+      description: Get streaming URLs and DRM information for video playback
+      operationId: getVideoPlaylist
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID
+          required: true
+          schema:
+            type: integer
+            example: 918638
+        - name: videoType
+          in: query
+          description: Type of video content
+          required: true
+          schema:
+            type: string
+            enum: [MOVIE, EPISODE]
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+        - name: tenantUid
+          in: query
+          description: Tenant identifier
+          required: true
+          schema:
+            type: string
+            example: Lh8t
+      responses:
+        '200':
+          description: Video playlist with streaming sources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoPlaylist'
+        '403':
+          description: Forbidden
+        '404':
+          description: Product not found
+
+  /products/{productId}/drm/widevine:
+    post:
+      tags:
+        - Playback
+      summary: Get Widevine DRM license
+      description: Request Widevine DRM license for protected content playback
+      operationId: getWidevineLicense
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID
+          required: true
+          schema:
+            type: integer
+            example: 918638
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+        - name: type
+          in: query
+          description: Content type
+          required: true
+          schema:
+            type: string
+            enum: [MOVIE, EPISODE]
+        - name: tenantUid
+          in: query
+          description: Tenant identifier
+          required: true
+          schema:
+            type: string
+            example: Lh8t
+      requestBody:
+        description: DRM challenge data
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: DRM license response
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Forbidden
+        '404':
+          description: Product not found
+
+  /products/vods:
+    get:
+      tags:
+        - Products
+      summary: Search and filter VOD content
+      description: Search and filter movies and series with various criteria
+      operationId: getVods
+      parameters:
+        - name: lang
+          in: query
+          description: Language code
+          required: true
+          schema:
+            type: string
+            enum: [LIT, ENG]
+            default: LIT
+        - name: platform
+          in: query
+          description: Platform identifier
+          required: true
+          schema:
+            type: string
+            enum: [BROWSER, MOBILE, TV]
+            default: BROWSER
+        - name: firstResult
+          in: query
+          description: Offset for pagination (zero-indexed)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: maxResults
+          in: query
+          description: Maximum number of results to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+        - name: mainCategoryId[]
+          in: query
+          description: Main category IDs to filter by (can be multiple)
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+          style: form
+          explode: true
+        - name: categoryId[]
+          in: query
+          description: Category IDs to filter by (can be multiple)
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+          style: form
+          explode: true
+        - name: sort
+          in: query
+          description: Sort field
+          required: false
+          schema:
+            type: string
+            enum: [year, title, rating, since]
+            default: since
+        - name: order
+          in: query
+          description: Sort order
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: List of VOD items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VodList'
+        '403':
+          description: Forbidden
+
+components:
+  schemas:
+    Category:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - adult
+        - type
+      properties:
+        id:
+          type: integer
+          example: 320
+        name:
+          type: string
+          example: "Detektyvas"
+        seoName:
+          type: string
+          example: "detektyvas"
+        seoNameSingular:
+          type: string
+          example: "detektyvas"
+        slug:
+          type: string
+          example: "detektyvas"
+        adult:
+          type: boolean
+          example: false
+        type:
+          type: string
+          enum: [VOD, LIVE]
+          example: "VOD"
+
+    Subscriber:
+      type: object
+      properties:
+        id:
+          type: integer
+        publicUid:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        subscriptionType:
+          type: string
+
+    BookmarkItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        itemId:
+          type: integer
+        itemType:
+          type: string
+          enum: [MOVIE, EPISODE, SERIAL]
+        since:
+          type: string
+          format: date-time
+        item:
+          oneOf:
+            - $ref: '#/components/schemas/Movie'
+            - $ref: '#/components/schemas/Episode'
+            - $ref: '#/components/schemas/Serial'
+
+    Section:
+      type: object
+      required:
+        - id
+        - title
+        - type
+        - contentType
+        - layout
+      properties:
+        id:
+          type: integer
+          example: 828509
+        title:
+          type: string
+          example: "Nauja savaitė"
+        type:
+          type: string
+          enum: [SECTION, BANNER]
+        contentType:
+          type: string
+          enum: [MANUAL, CATALOG, RECOMMENDATION]
+        layout:
+          type: string
+          enum: [CAROUSEL, GRID, HERO]
+        tilesAspect:
+          type: string
+          enum: ["16x9", "3x4", "1x1"]
+        tilesSize:
+          type: string
+          enum: [S, M, L, XL]
+        slug:
+          type: string
+          example: "nauja-savaite"
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionItem'
+        banner:
+          $ref: '#/components/schemas/ImageSet'
+        showTitle:
+          type: boolean
+        showTileTitle:
+          type: boolean
+        presentationTime:
+          type: integer
+          description: Presentation time in seconds
+        tilesActivity:
+          type: string
+          enum: [SIMPLE, DETAILED, DETAILED_WITH_TRAILER]
+        mainCategory:
+          $ref: '#/components/schemas/Category'
+        webUrl:
+          type: string
+        tenant:
+          type: object
+          properties:
+            uid:
+              type: string
+
+    SectionItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        since:
+          type: string
+          format: date-time
+        item:
+          oneOf:
+            - $ref: '#/components/schemas/Movie'
+            - $ref: '#/components/schemas/Episode'
+            - $ref: '#/components/schemas/Serial'
+        rank:
+          type: integer
+
+    VodList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/Movie'
+              - $ref: '#/components/schemas/Serial'
+        totalCount:
+          type: integer
+        firstResult:
+          type: integer
+        maxResults:
+          type: integer
+
+    Movie:
+      type: object
+      required:
+        - id
+        - publicUid
+        - title
+        - type
+      properties:
+        id:
+          type: integer
+          example: 428507
+        publicUid:
+          type: string
+          format: uuid
+          example: "cd3e46a8-5ddd-492f-9e71-7e6d0ba3fcc2"
+        externalUid:
+          type: string
+        title:
+          type: string
+          example: "Lietuvos krepšinio rinktinė"
+        lead:
+          type: string
+          description: Short description/synopsis
+        rating:
+          type: integer
+          minimum: 0
+          maximum: 18
+          description: Age rating
+        ratingEmbedded:
+          type: boolean
+        type:
+          type: string
+          enum: [MOVIE]
+          description: Content type discriminator
+        uhd:
+          type: boolean
+        hd:
+          type: boolean
+        displayActive:
+          type: boolean
+        since:
+          type: string
+          format: date-time
+        till:
+          type: string
+          format: date-time
+        images:
+          $ref: '#/components/schemas/ImageSet'
+        artworks:
+          $ref: '#/components/schemas/ImageSet'
+        titleTreatmentImages:
+          $ref: '#/components/schemas/ImageSet'
+        displaySchedules:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisplaySchedule'
+        webUrl:
+          type: string
+          format: uri
+        trailer:
+          type: boolean
+        tenant:
+          type: object
+          properties:
+            uid:
+              type: string
+        payable:
+          type: boolean
+        loginRequired:
+          type: boolean
+        duration:
+          type: integer
+          description: Duration in seconds
+        year:
+          type: integer
+        originalTitle:
+          type: string
+        mainCategory:
+          $ref: '#/components/schemas/Category'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        showRecommendations:
+          type: boolean
+        audio:
+          type: boolean
+        video:
+          type: boolean
+        kmsManagement:
+          type: boolean
+        slug:
+          type: string
+
+    Serial:
+      type: object
+      required:
+        - id
+        - publicUid
+        - title
+        - type
+      properties:
+        id:
+          type: integer
+        publicUid:
+          type: string
+          format: uuid
+        title:
+          type: string
+        rating:
+          type: integer
+          minimum: 0
+          maximum: 18
+        ratingEmbedded:
+          type: boolean
+        type:
+          type: string
+          enum: [SERIAL]
+          description: Content type discriminator
+        uhd:
+          type: boolean
+        hd:
+          type: boolean
+        since:
+          type: string
+          format: date-time
+        mainCategory:
+          $ref: '#/components/schemas/Category'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        year:
+          type: integer
+        originalTitle:
+          type: string
+        showRecommendations:
+          type: boolean
+        kmsManagement:
+          type: boolean
+        showSeasonNumber:
+          type: boolean
+        showEpisodeNumber:
+          type: boolean
+        slug:
+          type: string
+        images:
+          $ref: '#/components/schemas/ImageSet'
+        artworks:
+          $ref: '#/components/schemas/ImageSet'
+        webUrl:
+          type: string
+          format: uri
+
+    Episode:
+      type: object
+      required:
+        - id
+        - publicUid
+        - title
+        - type
+      properties:
+        id:
+          type: integer
+        publicUid:
+          type: string
+          format: uuid
+        title:
+          type: string
+        lead:
+          type: string
+        rating:
+          type: integer
+          minimum: 0
+          maximum: 18
+        ratingEmbedded:
+          type: boolean
+        type:
+          type: string
+          enum: [EPISODE]
+          description: Content type discriminator
+        uhd:
+          type: boolean
+        hd:
+          type: boolean
+        displayActive:
+          type: boolean
+        since:
+          type: string
+          format: date-time
+        till:
+          type: string
+          format: date-time
+        images:
+          $ref: '#/components/schemas/ImageSet'
+        artworks:
+          $ref: '#/components/schemas/ImageSet'
+        displaySchedules:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisplaySchedule'
+        webUrl:
+          type: string
+          format: uri
+        trailer:
+          type: boolean
+        titleTreatmentImages:
+          $ref: '#/components/schemas/ImageSet'
+        tenant:
+          type: object
+          properties:
+            uid:
+              type: string
+        payable:
+          type: boolean
+        loginRequired:
+          type: boolean
+        duration:
+          type: integer
+          description: Duration in seconds
+        year:
+          type: integer
+        originalTitle:
+          type: string
+        showRecommendations:
+          type: boolean
+        audio:
+          type: boolean
+        video:
+          type: boolean
+        kmsManagement:
+          type: boolean
+        number:
+          type: integer
+          description: Episode number
+        season:
+          $ref: '#/components/schemas/Season'
+        nextEpisodeDescending:
+          type: boolean
+        slug:
+          type: string
+
+    Season:
+      type: object
+      required:
+        - id
+        - publicUid
+        - title
+        - type
+      properties:
+        id:
+          type: integer
+        publicUid:
+          type: string
+          format: uuid
+        externalUid:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          enum: [SEASON]
+          description: Content type discriminator
+        number:
+          type: integer
+        serial:
+          $ref: '#/components/schemas/Serial'
+
+    DisplaySchedule:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+        till:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum: [NORMAL, PREVIEW, EARLY_ACCESS]
+
+    ImageSet:
+      type: object
+      properties:
+        "16x9":
+          type: array
+          items:
+            $ref: '#/components/schemas/Image'
+        "3x4":
+          type: array
+          items:
+            $ref: '#/components/schemas/Image'
+        "1x1":
+          type: array
+          items:
+            $ref: '#/components/schemas/Image'
+
+    Image:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Direct URL to the image
+        templateUrl:
+          type: string
+          description: Template URL with placeholders for width/height
+          example: "//r.dcs.redcdn.pl/scale/o2/lrt/portal/prod/images/{id}/cover-16x9.jpg?srcmode=0&srcx=0&srcy=0&quality=65&type=1&srcw=1/1&srch=1/1&dsth={height:177}&dstw={width:315}"
+
+    PlayerConfiguration:
+      type: object
+      properties:
+        nextEpisodeDelay:
+          type: integer
+          description: Delay in seconds before auto-playing next episode
+        playlistUrl:
+          type: string
+          format: uri
+          description: URL to fetch the video playlist
+        recap:
+          type: object
+          description: Recap/intro skip information
+        constantRating:
+          type: boolean
+        tracking:
+          $ref: '#/components/schemas/TrackingInfo'
+
+    TrackingInfo:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        configUrl:
+          type: string
+          format: uri
+        sessionId:
+          type: string
+          format: uuid
+        customerId:
+          type: integer
+        subscriberId:
+          type: integer
+        profileId:
+          type: integer
+        contentId:
+          type: integer
+        contentTitle:
+          type: string
+
+    VideoPlaylist:
+      type: object
+      properties:
+        sources:
+          type: object
+          properties:
+            SS:
+              type: array
+              items:
+                $ref: '#/components/schemas/StreamSource'
+              description: Smooth Streaming sources
+            HLS:
+              type: array
+              items:
+                $ref: '#/components/schemas/StreamSource'
+              description: HLS streaming sources
+            DASH:
+              type: array
+              items:
+                $ref: '#/components/schemas/StreamSource'
+              description: DASH streaming sources
+        drm:
+          type: object
+          properties:
+            widevine:
+              $ref: '#/components/schemas/DRMConfig'
+            playready:
+              $ref: '#/components/schemas/DRMConfig'
+            fairplay:
+              $ref: '#/components/schemas/DRMConfig'
+        subtitles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subtitle'
+        audioTracks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AudioTrack'
+
+    StreamSource:
+      type: object
+      properties:
+        src:
+          type: string
+          format: uri
+          description: Stream URL
+        type:
+          type: string
+          description: MIME type
+        cert:
+          type: string
+          format: uri
+          description: Certificate URL for FairPlay DRM
+
+    DRMConfig:
+      type: object
+      properties:
+        licenseUrl:
+          type: string
+          format: uri
+          description: DRM license server URL
+        certificateUrl:
+          type: string
+          format: uri
+          description: Certificate URL
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Additional headers for license requests
+
+    Subtitle:
+      type: object
+      properties:
+        src:
+          type: string
+          format: uri
+        srclang:
+          type: string
+          description: Language code
+        label:
+          type: string
+          description: Display label
+        kind:
+          type: string
+          enum: [subtitles, captions]
+
+    AudioTrack:
+      type: object
+      properties:
+        src:
+          type: string
+          format: uri
+        srclang:
+          type: string
+          description: Language code
+        label:
+          type: string
+          description: Display label
+
+  securitySchemes:
+    sessionHash:
+      type: apiKey
+      in: query
+      name: hash
+      description: Session hash for authenticated requests
+
+security:
+  - {}
+  - sessionHash: []
