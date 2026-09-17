@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "totalCount": 2,
+    "firstResult": 0,
+    "maxResults": 30
+  },
+  "items": [
+    {
+      "id": 890885,
+      "title": "Search vod",
+      "lead": "VOD search hit",
+      "type": "VOD",
+      "year": 2025,
+      "duration": 1638,
+      "mainCategory": {"id": 266, "name": "Dokumentiniai filmai"},
+      "images": {"16x9": [{"url": "//cdn.example.test/search-vod.jpg"}]}
+    }
+  ]
+}

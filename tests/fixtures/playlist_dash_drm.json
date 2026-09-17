@@ -1,0 +1,14 @@
+{
+  "sources": {
+    "DASH": [{"src": "//cdn.example.test/movie.mpd"}],
+    "HLS": [{"src": "//cdn.example.test/movie.m3u8"}],
+    "SS": [{"src": "//cdn.example.test/movie.ism"}]
+  },
+  "drm": {
+    "WIDEVINE": {"src": "https://license.example.test/widevine"},
+    "PLAYREADY": {"src": "https://license.example.test/playready"}
+  },
+  "subtitles": [
+    {"src": "//cdn.example.test/lt.vtt", "srclang": "lt"}
+  ]
+}

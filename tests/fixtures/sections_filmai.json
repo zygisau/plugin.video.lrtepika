@@ -1,0 +1,21 @@
+[
+  {
+    "id": 624215,
+    "title": "TOP",
+    "type": "SECTION",
+    "elements": [
+      {
+        "id": 21,
+        "item": {
+          "id": 909898,
+          "title": "Top film",
+          "lead": "Top film plot",
+          "type": "VOD",
+          "year": 2021,
+          "mainCategory": {"id": 268, "name": "Filmai"},
+          "images": {"16x9": [{"url": "//cdn.example.test/top.jpg"}]}
+        }
+      }
+    ]
+  }
+]

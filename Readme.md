@@ -13,6 +13,13 @@ Implemented in the current branch slice:
 - Add-on identity, MIT license, and clean ZIP packaging
 - Thin `requests` API client and pure directory mapping helpers
 
+Live public API notes used by the client (documented deviations from the retired OpenAPI file):
+
+- Catalog and search responses use `{ "meta": { totalCount, firstResult, maxResults }, "items": [...] }`
+- Section payloads expose `elements`, not `items`
+- Playable movies are typed `VOD` (playlist `videoType` remains `MOVIE`)
+- Playlist DRM objects use uppercase keys such as `WIDEVINE.src`
+
 Still arriving in later slices of this branch:
 
 - Root navigation: Featured, Movies, Series, Search

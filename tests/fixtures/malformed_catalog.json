@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "totalCount": 3,
+    "firstResult": 0,
+    "maxResults": 30
+  },
+  "items": [
+    {
+      "id": 501,
+      "title": "Good movie",
+      "lead": "Kept plot",
+      "type": "VOD",
+      "year": 2022,
+      "mainCategory": {"id": 268, "name": "Filmai"},
+      "images": {}
+    },
+    {
+      "title": "Missing id",
+      "type": "VOD"
+    },
+    {
+      "id": 502,
+      "title": "Unknown concert",
+      "type": "CONCERT"
+    },
+    "not-an-object",
+    {
+      "id": 503,
+      "title": "Empty art serial",
+      "lead": "No pictures",
+      "type": "SERIAL",
+      "year": "2023",
+      "images": {"16x9": [], "3x4": null}
+    },
+    {
+      "id": 504,
+      "title": "Protocol art",
+      "lead": "Has protocol-relative art",
+      "type": "VOD",
+      "images": {
+        "1x1": [{"url": "//cdn.example.test/square.jpg"}],
+        "16x9": [{"url": ""}]
+      }
+    }
+  ]
+}

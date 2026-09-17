@@ -1,0 +1,26 @@
+[
+  {
+    "id": 320,
+    "name": "Detektyvas",
+    "seoName": "detektyvas",
+    "slug": "detektyvas",
+    "adult": false,
+    "type": "VOD"
+  },
+  {
+    "id": 277,
+    "name": "Komedija",
+    "seoName": "komedija",
+    "slug": "komedija",
+    "adult": false,
+    "type": "VOD"
+  },
+  {
+    "id": 279,
+    "name": "Drama",
+    "seoName": "drama",
+    "slug": "drama",
+    "adult": false,
+    "type": "VOD"
+  }
+]

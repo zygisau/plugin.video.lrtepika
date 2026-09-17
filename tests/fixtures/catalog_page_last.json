@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "totalCount": 45,
+    "firstResult": 44,
+    "maxResults": 30
+  },
+  "items": [
+    {
+      "id": 145,
+      "title": "Last item",
+      "lead": "End of catalog",
+      "type": "VOD",
+      "year": 2019,
+      "images": {"16x9": [{"url": "https://cdn.example.test/last.jpg"}]}
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1263987,
+    "title": "Episode twelve",
+    "lead": "Episode plot",
+    "type": "EPISODE",
+    "number": 12,
+    "duration": 2746,
+    "year": 2024,
+    "season": {"id": 1217612, "type": "SEASON", "number": 5},
+    "images": {
+      "16x9": [{"url": "//cdn.example.test/episode-wide.jpg"}]
+    }
+  }
+]

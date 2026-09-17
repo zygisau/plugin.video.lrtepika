@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "totalCount": 45,
+    "firstResult": 0,
+    "maxResults": 30
+  },
+  "items": [
+    {
+      "id": 101,
+      "title": "First page one",
+      "lead": "One",
+      "type": "VOD",
+      "year": 2020,
+      "images": {"16x9": [{"url": "https://cdn.example.test/one.jpg"}]}
+    },
+    {
+      "id": 102,
+      "title": "First page two",
+      "lead": "Two",
+      "type": "VOD",
+      "year": 2021,
+      "images": {"16x9": [{"url": "https://cdn.example.test/two.jpg"}]}
+    }
+  ]
+}

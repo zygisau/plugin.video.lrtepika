@@ -1,0 +1,21 @@
+[
+  {
+    "id": 701001,
+    "title": "New series",
+    "type": "SECTION",
+    "elements": [
+      {
+        "id": 31,
+        "item": {
+          "id": 911472,
+          "title": "New serial",
+          "lead": "Serial plot",
+          "type": "SERIAL",
+          "year": 2025,
+          "mainCategory": {"id": 304, "name": "Serialai"},
+          "images": {"3x4": [{"url": "//cdn.example.test/serial-poster.jpg"}]}
+        }
+      }
+    ]
+  }
+]

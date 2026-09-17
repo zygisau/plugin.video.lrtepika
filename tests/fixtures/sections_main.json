@@ -1,0 +1,50 @@
+[
+  {
+    "id": 429461,
+    "title": "Featured row",
+    "type": "SECTION",
+    "contentType": "STATIC",
+    "elements": [
+      {
+        "id": 11,
+        "rank": 1,
+        "item": {
+          "id": 1001,
+          "title": "Featured movie",
+          "lead": "A featured VOD plot",
+          "type": "VOD",
+          "year": 2024,
+          "duration": 5400,
+          "mainCategory": {"id": 268, "name": "Filmai"},
+          "images": {
+            "3x4": [{"url": "//cdn.example.test/movie-poster.jpg"}],
+            "16x9": [{"url": "//cdn.example.test/movie-wide.jpg"}]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": 433059,
+    "title": "Series spotlight",
+    "type": "SECTION",
+    "contentType": "MANUAL",
+    "elements": [
+      {
+        "id": 12,
+        "rank": 1,
+        "item": {
+          "id": 2001,
+          "title": "Featured serial",
+          "lead": "A featured serial plot",
+          "type": "SERIAL",
+          "year": 2025,
+          "mainCategory": {"id": 304, "name": "Serialai"},
+          "images": {
+            "16x9": [{"url": "https://cdn.example.test/serial-wide.jpg"}]
+          }
+        }
+      }
+    ]
+  }
+]

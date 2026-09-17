@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "totalCount": 1,
+    "firstResult": 0,
+    "maxResults": 30
+  },
+  "items": [
+    {
+      "id": 911472,
+      "title": "Search serial",
+      "lead": "SERIAL search hit",
+      "type": "SERIAL",
+      "year": 2025,
+      "mainCategory": {"id": 304, "name": "Serialai"},
+      "images": {"3x4": [{"url": "//cdn.example.test/search-serial.jpg"}]}
+    }
+  ]
+}

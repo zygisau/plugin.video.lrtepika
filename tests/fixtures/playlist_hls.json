@@ -1,0 +1,7 @@
+{
+  "sources": {
+    "HLS": [{"src": "https://cdn.example.test/free.m3u8"}]
+  },
+  "drm": {},
+  "subtitles": []
+}

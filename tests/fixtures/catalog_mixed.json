@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "totalCount": 2,
+    "firstResult": 0,
+    "maxResults": 30
+  },
+  "items": [
+    {
+      "id": 828554,
+      "title": "Documentary visit",
+      "lead": "Actual documentary plot",
+      "type": "VOD",
+      "year": 2018,
+      "duration": 1522,
+      "mainCategory": {"id": 266, "name": "Dokumentiniai filmai"},
+      "categories": [{"id": 279, "name": "Drama"}],
+      "images": {
+        "3x4": [{"url": "//cdn.example.test/doc-poster.jpg"}],
+        "16x9": [{"url": "//cdn.example.test/doc-wide.jpg"}]
+      }
+    },
+    {
+      "id": 1001665,
+      "title": "Law firm",
+      "lead": "Actual serial plot",
+      "type": "SERIAL",
+      "year": 2024,
+      "mainCategory": {"id": 304, "name": "Serialai"},
+      "images": {
+        "16x9": [{"url": "https://cdn.example.test/serial-wide.jpg"}]
+      }
+    }
+  ]
+}

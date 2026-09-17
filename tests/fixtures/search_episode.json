@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "totalCount": 1,
+    "firstResult": 0,
+    "maxResults": 30
+  },
+  "items": [
+    {
+      "id": 911474,
+      "title": "Search episode",
+      "lead": "EPISODE search hit",
+      "type": "EPISODE",
+      "number": 2,
+      "year": 2025,
+      "duration": 2746,
+      "season": {"id": 911473, "type": "SEASON", "number": 1},
+      "images": {"16x9": [{"url": "//cdn.example.test/search-episode.jpg"}]}
+    }
+  ]
+}
