@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import parse_qsl, urlencode
 
@@ -10,6 +11,7 @@ import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
+import xbmcvfs
 
 from resources.lib.api import ApiError, EpikaApi
 from resources.lib.directory import (
@@ -27,8 +29,10 @@ from resources.lib.directory import (
     parse_catalog_page,
     parse_item_list,
     parse_playlist,
+    parse_search_page,
     parse_sections,
 )
+from resources.lib.history import HISTORY_FILENAME, HISTORY_LIMIT, add_history, load_history, normalize_term
 
 ADDON_ID = "plugin.video.lrtepika"
 DEFAULT_BASE_URL = f"plugin://{ADDON_ID}/"
@@ -36,16 +40,36 @@ NEXT_PAGE_LABEL = "Next page"
 EMPTY_MESSAGE = "No titles in this folder."
 LOAD_ERROR_MESSAGE = "Unable to load this folder."
 PLAY_ERROR_MESSAGE = "Unable to play this title."
-SEARCH_PLACEHOLDER_MESSAGE = "Search is not available yet."
+SEARCH_EMPTY_MESSAGE = "No search results."
+NEW_SEARCH_LABEL = "New search…"
+SEARCH_LOOKAHEAD = PAGE_SIZE + 1
+SEARCH_OFFSET_PARAMS = (
+    ("VOD", "vod_offset"),
+    ("SERIAL", "serial_offset"),
+    ("EPISODE", "episode_offset"),
+)
 LICENSE_HEADERS = "Content-Type=application/octet-stream"
 PLAYLIST_TYPE = {"VOD": "MOVIE", "EPISODE": "EPISODE"}
 DASH_MIME = "application/dash+xml"
 HLS_MIME = "application/vnd.apple.mpegurl"
 
 
-def run(argv, api=None):
+def run(argv, api=None, history_path=None):
     """Start the plugin with Kodi's `sys.argv` vector."""
-    Plugin(argv, api=api).dispatch()
+    Plugin(argv, api=api, history_path=history_path).dispatch()
+
+
+def _resolve_history_path(history_path: str | Path | None) -> Path | None:
+    if history_path is not None:
+        text = str(history_path).strip()
+        return Path(text) if text else None
+    try:
+        profile = xbmcvfs.translatePath(xbmcaddon.Addon().getAddonInfo("profile") or "")
+    except Exception:
+        profile = ""
+    if not isinstance(profile, str) or not profile.strip():
+        return None
+    return Path(profile) / HISTORY_FILENAME
 
 
 def _log(message: str, level: int = xbmc.LOGERROR) -> None:
@@ -83,7 +107,7 @@ def _parse_categories(payload: Any) -> list[tuple[int, str]]:
 
 
 class Plugin:
-    def __init__(self, argv: list[str], api: EpikaApi | None = None):
+    def __init__(self, argv: list[str], api: EpikaApi | None = None, history_path=None):
         self.base_url = argv[0] if argv else DEFAULT_BASE_URL
         try:
             self.handle = int(argv[1]) if len(argv) > 1 else -1
@@ -94,6 +118,7 @@ class Plugin:
             raw = raw[1:]
         self.params = dict(parse_qsl(raw, keep_blank_values=True))
         self.api = api or EpikaApi()
+        self.history_path = _resolve_history_path(history_path)
 
     def dispatch(self) -> None:
         route = self.params.get("route") or None
@@ -119,7 +144,9 @@ class Plugin:
             "catalog": self.list_catalog,
             "serial": self.list_seasons,
             "episodes": self.list_episodes,
-            "search": self.list_search_placeholder,
+            "search": self.list_search,
+            "search_new": self.list_search_new,
+            "search_results": self.list_search_results,
         }
         handler = handlers.get(route)
         try:
@@ -390,9 +417,117 @@ class Plugin:
             return
         self._add_items([self._entry(item) for item in items])
 
-    def list_search_placeholder(self) -> None:
+    def list_search(self) -> None:
         self._set_heading("Search", "files")
-        self._empty(SEARCH_PLACEHOLDER_MESSAGE)
+        entries = [self._folder(NEW_SEARCH_LABEL, self.url(route="search_new"))]
+        for term in self._history_terms():
+            entries.append(self._folder(term, self.url(route="search_results", keyword=term)))
+        self._add_items(entries)
+
+    def list_search_new(self) -> None:
+        keyboard = xbmc.Keyboard("", "Search", False)
+        keyboard.doModal()
+        if not keyboard.isConfirmed():
+            self.list_search()
+            return
+        term = normalize_term(keyboard.getText())
+        if not term:
+            self.list_search()
+            return
+        self._remember_term(term)
+        self.params["keyword"] = term
+        for _item_type, param_name in SEARCH_OFFSET_PARAMS:
+            self.params.pop(param_name, None)
+        self.list_search_results()
+
+    def list_search_results(self) -> None:
+        keyword = normalize_term(self.params.get("keyword"))
+        if not keyword:
+            self.list_search()
+            return
+        self._set_heading(keyword, "videos")
+        pages, failures = self._search_pages(keyword)
+        if failures:
+            raise failures[0]
+        items: list[DirectoryItem] = []
+        seen: set[tuple[str, int]] = set()
+        next_offsets: dict[str, int] = {}
+        has_next = False
+        for item_type, param_name, offset, page in pages:
+            if page is None or offset < 0:
+                next_offsets[param_name] = -1
+                continue
+            for item in page.items:
+                key = (item.type, item.id)
+                if key in seen:
+                    continue
+                seen.add(key)
+                items.append(item)
+            if page.has_next:
+                next_offsets[param_name] = offset + PAGE_SIZE
+                has_next = True
+            else:
+                next_offsets[param_name] = -1
+        if not items:
+            self._empty(SEARCH_EMPTY_MESSAGE)
+            return
+        entries = [self._entry(item) for item in items]
+        if has_next:
+            entries.append(
+                self._folder(
+                    NEXT_PAGE_LABEL,
+                    self.url(route="search_results", keyword=keyword, **next_offsets),
+                    special_sort="bottom",
+                )
+            )
+        self._add_items(entries)
+
+    def _history_terms(self) -> list[str]:
+        if self.history_path is None:
+            return []
+        try:
+            return load_history(self.history_path, limit=HISTORY_LIMIT)
+        except Exception:
+            return []
+
+    def _remember_term(self, term: str) -> None:
+        if self.history_path is None:
+            _log("unable to save search history", xbmc.LOGWARNING)
+            return
+        try:
+            add_history(self.history_path, term, limit=HISTORY_LIMIT)
+        except Exception:
+            _log("unable to save search history", xbmc.LOGWARNING)
+
+    def _search_offset(self, name: str) -> int:
+        value = coerce_int(self.params.get(name))
+        if value is None:
+            return 0
+        if value < 0:
+            return -1
+        return value
+
+    def _search_pages(self, keyword: str):
+        pages = []
+        failures: list[ApiError] = []
+        for item_type, param_name in SEARCH_OFFSET_PARAMS:
+            offset = self._search_offset(param_name)
+            if offset < 0:
+                pages.append((item_type, param_name, offset, None))
+                continue
+            try:
+                payload = self.api.search(
+                    item_type,
+                    keyword,
+                    first_result=offset,
+                    max_results=SEARCH_LOOKAHEAD,
+                )
+                page = parse_search_page(payload, first_result=offset, page_size=PAGE_SIZE)
+                pages.append((item_type, param_name, offset, page))
+            except ApiError as exc:
+                failures.append(exc)
+                pages.append((item_type, param_name, offset, None))
+        return pages, failures
 
     def play(self) -> None:
         product_id = coerce_int(self.params.get("product_id"))

@@ -23,6 +23,7 @@ REQUIRED_FILES = (
     "resources/lib/__init__.py",
     "resources/lib/api.py",
     "resources/lib/directory.py",
+    "resources/lib/history.py",
     "resources/lib/plugin.py",
 )
 

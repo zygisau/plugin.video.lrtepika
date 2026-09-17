@@ -14,6 +14,7 @@ from resources.lib.directory import (
     parse_catalog_page,
     parse_item_list,
     parse_playlist,
+    parse_search_page,
     parse_sections,
 )
 
@@ -142,6 +143,75 @@ def test_playlist_dash_drm_and_hls_forms():
     assert hls.hls_url == "https://cdn.example.test/free.m3u8"
     assert hls.has_drm is False
     assert parse_playlist("nope") is None
+
+
+def _search_records(item_type: str, count: int, start_id: int = 1) -> list[dict]:
+    records = []
+    for index in range(count):
+        record = {
+            "id": start_id + index,
+            "title": f"{item_type} {start_id + index}",
+            "lead": "Search hit",
+            "type": item_type,
+            "year": 2025,
+        }
+        if item_type == "EPISODE":
+            record["fullTitle"] = f"Serial / {record['title']}"
+            record["number"] = index + 1
+        records.append(record)
+    return records
+
+
+def test_search_page_ignores_misleading_total_count():
+    payload = {
+        "meta": {"totalCount": 1, "firstResult": 0, "maxResults": 31},
+        "items": _search_records("VOD", 31),
+    }
+    page = parse_search_page(payload, first_result=0, page_size=PAGE_SIZE)
+    assert page.has_next is True
+    assert page.page_size == PAGE_SIZE
+    assert page.first_result == 0
+    assert len(page.items) == PAGE_SIZE
+    assert page.items[0].id == 1
+    assert page.items[-1].id == PAGE_SIZE
+
+    exact = {
+        "meta": {"totalCount": 100, "firstResult": 0, "maxResults": 31},
+        "items": _search_records("SERIAL", PAGE_SIZE),
+    }
+    last = parse_search_page(exact, first_result=30, page_size=PAGE_SIZE)
+    assert last.has_next is False
+    assert last.first_result == 30
+    assert len(last.items) == PAGE_SIZE
+
+
+def test_search_lookahead_uses_thirty_first_item_as_sentinel():
+    payload = {
+        "meta": {"totalCount": 31, "firstResult": 0, "maxResults": 31},
+        "items": _search_records("VOD", 31),
+    }
+    page = parse_search_page(payload, first_result=0, page_size=PAGE_SIZE)
+    assert [item.id for item in page.items] == list(range(1, 31))
+    assert page.has_next is True
+
+    short = {
+        "meta": {"totalCount": 8, "firstResult": 0, "maxResults": 31},
+        "items": _search_records("VOD", 8),
+    }
+    assert parse_search_page(short, first_result=0, page_size=PAGE_SIZE).has_next is False
+
+
+def test_search_episode_prefers_nonempty_full_title():
+    payload = load_fixture("search_episode.json")
+    payload["items"][0]["fullTitle"] = "Search serial. Search episode"
+    page = parse_search_page(payload, first_result=0, page_size=PAGE_SIZE)
+    assert page.items[0].title == "Search serial. Search episode"
+    assert page.items[0].type == "EPISODE"
+    assert page.items[0].is_playable is True
+
+    payload["items"][0]["fullTitle"] = "   "
+    fallback = parse_search_page(payload, first_result=0, page_size=PAGE_SIZE)
+    assert fallback.items[0].title == "Search episode"
 
 
 def test_map_item_ignores_invalid_year_and_blank_urls():

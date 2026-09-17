@@ -76,6 +76,14 @@ class CatalogPage:
 
 
 @dataclass(frozen=True)
+class SearchPage:
+    items: tuple[DirectoryItem, ...]
+    first_result: int
+    page_size: int
+    has_next: bool
+
+
+@dataclass(frozen=True)
 class PlaylistView:
     dash_url: str | None
     hls_url: str | None
@@ -261,6 +269,37 @@ def _envelope_items_and_meta(payload: Any) -> tuple[list[Any], dict[str, Any]]:
         if key not in merged_meta and key in payload:
             merged_meta[key] = payload[key]
     return items, merged_meta
+
+
+def _with_episode_full_title(raw: Any) -> Any:
+    if not isinstance(raw, dict) or raw.get("type") != "EPISODE":
+        return raw
+    full_title = raw.get("fullTitle")
+    if not isinstance(full_title, str):
+        return raw
+    cleaned = full_title.strip()
+    if not cleaned:
+        return raw
+    updated = dict(raw)
+    updated["title"] = cleaned
+    return updated
+
+
+def parse_search_page(
+    payload: Any,
+    first_result: int | None = None,
+    page_size: int | None = None,
+) -> SearchPage:
+    raw_items, _meta = _envelope_items_and_meta(payload)
+    resolved_first = 0 if first_result is None else first_result
+    resolved_size = PAGE_SIZE if page_size is None else page_size
+    prepared = [_with_episode_full_title(raw) for raw in raw_items[:resolved_size]]
+    return SearchPage(
+        items=map_items(prepared),
+        first_result=resolved_first,
+        page_size=resolved_size,
+        has_next=len(raw_items) > resolved_size,
+    )
 
 
 def parse_catalog_page(

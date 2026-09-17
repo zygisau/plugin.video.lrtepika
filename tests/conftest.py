@@ -102,13 +102,15 @@ class FakeDialog:
 
 class FakeKeyboard:
     instances = []
+    next_text = ""
+    next_confirmed = False
 
     def __init__(self, default="", heading="", hidden=False):
         self.default = default
         self.heading = heading
         self.hidden = hidden
-        self._text = default
-        self._confirmed = False
+        self._text = FakeKeyboard.next_text
+        self._confirmed = FakeKeyboard.next_confirmed
         FakeKeyboard.instances.append(self)
 
     def doModal(self):
@@ -273,5 +275,7 @@ def pytest_runtest_setup(item):
     KODI.notifications.clear()
     KODI.sort_methods.clear()
     FakeKeyboard.instances.clear()
+    FakeKeyboard.next_text = ""
+    FakeKeyboard.next_confirmed = False
     KODI.plugin_category = None
     KODI.content = None

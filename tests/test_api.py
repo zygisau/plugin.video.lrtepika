@@ -222,3 +222,15 @@ def test_live_catalog_envelope_opt_in():
     assert "items" in payload
     assert "meta" in payload
     assert "totalCount" in payload["meta"]
+
+
+@pytest.mark.live
+def test_live_search_envelope_opt_in():
+    if os.environ.get("LRT_EPIKA_LIVE") != "1":
+        pytest.skip("set LRT_EPIKA_LIVE=1 for read-only live checks")
+    api = EpikaApi()
+    payload = api.search("VOD", "lita", first_result=0, max_results=1)
+    assert isinstance(payload, dict)
+    assert "items" in payload
+    assert "meta" in payload
+    assert "totalCount" in payload["meta"]

@@ -31,6 +31,7 @@ def test_build_creates_single_wrapper_zip(tmp_path):
         f"{ADDON_ID}/resources/lib/__init__.py",
         f"{ADDON_ID}/resources/lib/api.py",
         f"{ADDON_ID}/resources/lib/directory.py",
+        f"{ADDON_ID}/resources/lib/history.py",
         f"{ADDON_ID}/resources/lib/plugin.py",
         f"{ADDON_ID}/resources/images/icon.png",
         f"{ADDON_ID}/resources/images/fanart.jpg",

@@ -12,21 +12,21 @@ Implemented in the current branch slice:
 
 - Add-on identity, MIT license, and clean ZIP packaging
 - Thin `requests` API client and pure directory mapping helpers
-- Root navigation: Featured, Movies, Series, and a Search placeholder
+- Root navigation: Featured, Movies, Series, and Search
 - Offset pagination and serial → season → episode drill-down
+- Search keyboard, typed VOD / SERIAL / EPISODE results, and recent-term history
 - Playback: DASH / Widevine, with non-DRM HLS fallback
+
+Search history is a newest-first JSON list saved as `search_history.json` in the add-on profile (`special://profile/addon_data/plugin.video.lrtepika/` on Kodi).
 
 Live public API notes used by the client (documented deviations from the retired OpenAPI file):
 
 - Catalog and search responses use `{ "meta": { totalCount, firstResult, maxResults }, "items": [...] }`
+- Search `meta.totalCount` is the current page size, not a global result total; pagination uses a 31-item lookahead
 - Section payloads expose `elements`, not `items`
 - Playable movies are typed `VOD` (playlist `videoType` remains `MOVIE`)
 - Episode items still request `videoType=EPISODE` first; live Epika currently 404s that type and serves the same assets with `videoType=MOVIE`, so playback retries `MOVIE`
 - Playlist DRM objects use uppercase keys such as `WIDEVINE.src`
-
-Still arriving in later slices of this branch:
-
-- Search keyboard, typed results, and profile search history
 
 ## Requirements
 
