@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon id="plugin.video.lrtepika"
        name="LRT Epika"
-       version="0.1.0"
+       version="0.2.0"
        provider-name="zygisau">
   <requires>
     <import addon="xbmc.python" version="3.0.1"/>
@@ -11,6 +11,7 @@
   <extension point="xbmc.python.pluginsource" library="main.py">
     <provides>video</provides>
   </extension>
+  <extension point="xbmc.service" library="service.py"/>
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">LRT Epika movies and series</summary>
     <summary lang="lt_LT">LRT Epikos filmai ir serialai</summary>

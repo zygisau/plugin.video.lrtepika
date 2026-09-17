@@ -44,7 +44,7 @@ class EpikaApi:
         base_url: str = DEFAULT_BASE_URL,
         lang: str = DEFAULT_LANG,
         platform: str = DEFAULT_PLATFORM,
-        timeout: float = DEFAULT_TIMEOUT,
+        timeout: float | tuple[float, float] = DEFAULT_TIMEOUT,
         tenant_uid: str = TENANT_UID,
     ):
         self.session = session or requests.Session()
@@ -146,6 +146,14 @@ class EpikaApi:
     def get_product(self, product_id: int) -> Any:
         pid = _as_int(product_id, "product_id")
         return self._get("get_product", f"/products/vods/{pid}", self._params())
+
+    def get_season_detail(self, season_id: int) -> Any:
+        sid = _as_int(season_id, "season_id")
+        return self._get(
+            "get_season_detail",
+            f"/products/vods/seasons/{sid}/detail",
+            self._params(),
+        )
 
     def get_serial_seasons(self, serial_id: int) -> Any:
         sid = _as_int(serial_id, "serial_id")

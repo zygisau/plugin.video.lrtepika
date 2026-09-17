@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_build_creates_single_wrapper_zip(tmp_path):
     artifact = build_zip(root=ROOT, dist_dir=tmp_path)
-    assert artifact.name == "plugin.video.lrtepika-0.1.0.zip"
+    assert artifact.name == "plugin.video.lrtepika-0.2.0.zip"
     validate_zip(artifact)
 
     with zipfile.ZipFile(artifact) as zf:
@@ -26,6 +26,7 @@ def test_build_creates_single_wrapper_zip(tmp_path):
     required = {
         f"{ADDON_ID}/addon.xml",
         f"{ADDON_ID}/main.py",
+        f"{ADDON_ID}/service.py",
         f"{ADDON_ID}/LICENSE.txt",
         f"{ADDON_ID}/Readme.md",
         f"{ADDON_ID}/resources/lib/__init__.py",
@@ -33,6 +34,13 @@ def test_build_creates_single_wrapper_zip(tmp_path):
         f"{ADDON_ID}/resources/lib/directory.py",
         f"{ADDON_ID}/resources/lib/history.py",
         f"{ADDON_ID}/resources/lib/plugin.py",
+        f"{ADDON_ID}/resources/lib/routes.py",
+        f"{ADDON_ID}/resources/lib/send_http.py",
+        f"{ADDON_ID}/resources/lib/send_reference.py",
+        f"{ADDON_ID}/resources/lib/send_service.py",
+        f"{ADDON_ID}/resources/settings.xml",
+        f"{ADDON_ID}/resources/language/resource.language.en_gb/strings.po",
+        f"{ADDON_ID}/resources/language/resource.language.lt_lt/strings.po",
         f"{ADDON_ID}/resources/images/icon.png",
         f"{ADDON_ID}/resources/images/fanart.jpg",
     }
@@ -52,9 +60,21 @@ def test_build_creates_single_wrapper_zip(tmp_path):
 
     with zipfile.ZipFile(artifact) as zf:
         addon_xml = zf.read(f"{ADDON_ID}/addon.xml").decode("utf-8")
+        settings_xml = zf.read(f"{ADDON_ID}/resources/settings.xml").decode("utf-8")
+        readme = zf.read(f"{ADDON_ID}/Readme.md").decode("utf-8")
+        english = zf.read(f"{ADDON_ID}/resources/language/resource.language.en_gb/strings.po").decode("utf-8")
+        lithuanian = zf.read(f"{ADDON_ID}/resources/language/resource.language.lt_lt/strings.po").decode("utf-8")
     assert 'id="plugin.video.lrtepika"' in addon_xml
-    assert 'version="0.1.0"' in addon_xml
+    assert 'version="0.2.0"' in addon_xml
+    assert 'point="xbmc.service"' in addon_xml
+    assert 'library="service.py"' in addon_xml
     assert "plugin.video.example" not in addon_xml
+    assert "<default>false</default>" in settings_xml
+    assert "127.0.0.1" in settings_xml
+    assert "Bearer " not in settings_xml
+    assert "REPLACE_WITH_RANDOM_TOKEN" in readme
+    assert "msgctxt \"#32010\"" in english
+    assert "Įjungti siuntimą į Kodi" in lithuanian
 
 
 def test_build_is_deterministic(tmp_path):

@@ -18,6 +18,7 @@ DIR_ATTR = (0o755 << 16) | 0x10
 REQUIRED_FILES = (
     "addon.xml",
     "main.py",
+    "service.py",
     "LICENSE.txt",
     "Readme.md",
     "resources/lib/__init__.py",
@@ -25,6 +26,13 @@ REQUIRED_FILES = (
     "resources/lib/directory.py",
     "resources/lib/history.py",
     "resources/lib/plugin.py",
+    "resources/lib/routes.py",
+    "resources/lib/send_http.py",
+    "resources/lib/send_reference.py",
+    "resources/lib/send_service.py",
+    "resources/settings.xml",
+    "resources/language/resource.language.en_gb/strings.po",
+    "resources/language/resource.language.lt_lt/strings.po",
 )
 
 OPTIONAL_LIB_FILES = (
@@ -112,7 +120,17 @@ def should_include(relative: Path) -> bool:
     if parts[0] == "resources" and len(parts) >= 2 and parts[1] == "lib":
         if len(parts) != 3:
             return False
-        allowed = {"__init__.py", "api.py", "directory.py", "plugin.py", "history.py"}
+        allowed = {
+            "__init__.py",
+            "api.py",
+            "directory.py",
+            "plugin.py",
+            "history.py",
+            "routes.py",
+            "send_http.py",
+            "send_reference.py",
+            "send_service.py",
+        }
         return parts[2] in allowed
     return True
 
@@ -219,6 +237,20 @@ def validate_zip(archive: Path) -> None:
             raise SystemExit("ZIP addon.xml still references plugin.video.example")
         if "<license>MIT</license>" not in addon_xml:
             raise SystemExit("ZIP addon.xml is not MIT")
+        if 'point="xbmc.service"' not in addon_xml or 'library="service.py"' not in addon_xml:
+            raise SystemExit("ZIP addon.xml is missing the xbmc.service extension")
+        settings_xml = zf.read(f"{ADDON_ID}/resources/settings.xml").decode("utf-8")
+        if 'id="send_enabled"' not in settings_xml or "<default>false</default>" not in settings_xml:
+            raise SystemExit("ZIP settings.xml must default the send listener to disabled")
+        if 'id="send_bind"' not in settings_xml or "127.0.0.1" not in settings_xml:
+            raise SystemExit("ZIP settings.xml must default bind to loopback")
+        if 'id="send_token"' not in settings_xml:
+            raise SystemExit("ZIP settings.xml is missing the hidden send token")
+        if "Bearer " in settings_xml or "token_urlsafe" in settings_xml:
+            raise SystemExit("ZIP settings.xml appears to contain a built-in token")
+        readme = zf.read(f"{ADDON_ID}/Readme.md").decode("utf-8")
+        if "REPLACE_WITH_RANDOM_TOKEN" not in readme:
+            raise SystemExit("ZIP README must document a placeholder token only")
 
 
 def main(argv: list[str] | None = None) -> int:

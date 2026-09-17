@@ -1,0 +1,21 @@
+{
+  "id": 1394661,
+  "title": "Pažadas 8 s.",
+  "type": "EPISODE",
+  "type_": "EPISODE",
+  "webUrl": "https://epika.lrt.lt/vaidybiniai-serialai,304/pazadas-odcinki,471378/odcinek-8,S04E08,1394661",
+  "number": 8,
+  "season": {
+    "id": 1351060,
+    "title": "4 sezonas",
+    "type": "SEASON",
+    "type_": "SEASON",
+    "number": 4,
+    "serial": {
+      "id": 471378,
+      "title": "Pažadas",
+      "type": "SERIAL",
+      "type_": "SERIAL"
+    }
+  }
+}

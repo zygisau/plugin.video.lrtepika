@@ -1,0 +1,61 @@
+# Kodi Media Center language file
+# Addon Name: LRT Epika
+# Addon id: plugin.video.lrtepika
+# Addon Provider: zygisau
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.video.lrtepika\n"
+"Report-Msgid-Bugs-To: https://github.com/zygisau/plugin.video.lrtepika\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: English\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#32000"
+msgid "Send to Kodi"
+msgstr ""
+
+msgctxt "#32001"
+msgid "Optional LAN listener that accepts authenticated Epika URLs from a phone shortcut. Disabled by default."
+msgstr ""
+
+msgctxt "#32002"
+msgid "Listener"
+msgstr ""
+
+msgctxt "#32010"
+msgid "Enable Send to Kodi"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Start a local HTTP listener after you set a bind address, port, and access token. Keep this off unless you are on a trusted WPA2/WPA3 home LAN."
+msgstr ""
+
+msgctxt "#32012"
+msgid "Bind address"
+msgstr ""
+
+msgctxt "#32013"
+msgid "IPv4 address to listen on. Default 127.0.0.1 is this device only. Set your LAN IPv4 to accept iPhone requests. Do not use 0.0.0.0."
+msgstr ""
+
+msgctxt "#32014"
+msgid "Port"
+msgstr ""
+
+msgctxt "#32015"
+msgid "TCP port from 1024 to 65535. Default 8765. Changing the port requires updating the iPhone Shortcut."
+msgstr ""
+
+msgctxt "#32016"
+msgid "Access token"
+msgstr ""
+
+msgctxt "#32017"
+msgid "Secret Bearer token. Generate at least 32 random URL-safe bytes, paste it here, and keep it only in Kodi settings and the Shortcut Authorization header. Rotate it after a lost phone or suspected leak."
+msgstr ""

@@ -167,6 +167,25 @@ def test_serial_and_episode_paths():
     )
 
 
+def test_get_season_detail_path_and_defaults():
+    session = RecordingSession(FakeResponse(payload=load_fixture("season_detail.json")))
+    api = EpikaApi(session=session)
+    payload = api.get_season_detail(1351060)
+    assert payload["id"] == 1351060
+    call = session.calls[0]
+    assert call["url"] == "https://epika.lrt.lt/api/products/vods/seasons/1351060/detail"
+    assert call["timeout"] == DEFAULT_TIMEOUT
+    assert call["params"] == [("lang", "LIT"), ("platform", "BROWSER")]
+
+
+def test_tuple_timeout_is_passed_through():
+    session = RecordingSession(FakeResponse(payload=load_fixture("product_vod.json")))
+    api = EpikaApi(session=session, timeout=(2.0, 4.0))
+    api.get_product(432486)
+    assert session.calls[0]["timeout"] == (2.0, 4.0)
+    assert session.calls[0]["url"] == "https://epika.lrt.lt/api/products/vods/432486"
+
+
 def test_timeout_becomes_api_error():
     session = RecordingSession(error=requests.Timeout("slow"))
     api = EpikaApi(session=session)
@@ -234,3 +253,19 @@ def test_live_search_envelope_opt_in():
     assert "items" in payload
     assert "meta" in payload
     assert "totalCount" in payload["meta"]
+
+
+@pytest.mark.live
+def test_live_season_detail_opt_in():
+    if os.environ.get("LRT_EPIKA_LIVE") != "1":
+        pytest.skip("set LRT_EPIKA_LIVE=1 for read-only live checks")
+    api = EpikaApi()
+    payload = api.get_season_detail(1351060)
+    assert isinstance(payload, dict)
+    assert payload.get("id") == 1351060
+    assert payload.get("type") == "SEASON"
+    serial = payload.get("serial")
+    assert isinstance(serial, dict)
+    assert serial.get("id") == 471378
+    assert "sources" not in payload
+    assert "WIDEVINE" not in json.dumps(payload)

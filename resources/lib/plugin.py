@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Iterable
-from urllib.parse import parse_qsl, urlencode
+from urllib.parse import parse_qsl
 
 import xbmc
 import xbmcaddon
@@ -14,6 +14,7 @@ import xbmcplugin
 import xbmcvfs
 
 from resources.lib.api import ApiError, EpikaApi
+from resources.lib.routes import DEFAULT_BASE_URL, build_plugin_url
 from resources.lib.directory import (
     FEATURED_SECTION,
     MOVIE_MAIN_CATEGORIES,
@@ -35,7 +36,6 @@ from resources.lib.directory import (
 from resources.lib.history import HISTORY_FILENAME, HISTORY_LIMIT, add_history, load_history, normalize_term
 
 ADDON_ID = "plugin.video.lrtepika"
-DEFAULT_BASE_URL = f"plugin://{ADDON_ID}/"
 NEXT_PAGE_LABEL = "Next page"
 EMPTY_MESSAGE = "No titles in this folder."
 LOAD_ERROR_MESSAGE = "Unable to load this folder."
@@ -128,10 +128,7 @@ class Plugin:
         self._dispatch_directory(route)
 
     def url(self, **kwargs: Any) -> str:
-        params = [(key, value) for key, value in kwargs.items() if value is not None]
-        if not params:
-            return self.base_url
-        return f"{self.base_url}?{urlencode(params)}"
+        return build_plugin_url(self.base_url, **kwargs)
 
     def _dispatch_directory(self, route: str | None) -> None:
         handlers = {

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+import threading
 import types
 from pathlib import Path
 
@@ -126,13 +127,18 @@ class FakeKeyboard:
 class FakeAddon:
     def __init__(self, id=None):
         self._id = id or "plugin.video.lrtepika"
-        self._settings = {}
+        self._settings = {
+            "send_enabled": "false",
+            "send_bind": "127.0.0.1",
+            "send_port": "8765",
+            "send_token": "",
+        }
 
     def getAddonInfo(self, key):
         mapping = {
             "id": self._id,
             "name": "LRT Epika",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "path": str(ROOT),
             "profile": str(ROOT / "tests" / "_profile"),
             "author": "zygisau",
@@ -140,10 +146,42 @@ class FakeAddon:
         return mapping.get(key, "")
 
     def getSetting(self, key):
-        return self._settings.get(key, "")
+        return str(self._settings.get(key, ""))
+
+    def getSettingBool(self, key):
+        value = self._settings.get(key, False)
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in ("true", "1")
+
+    def getSettingInt(self, key):
+        value = self._settings.get(key, 0)
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
 
     def setSetting(self, key, value):
         self._settings[key] = value
+
+
+class FakeMonitor:
+    def __init__(self):
+        self._abort = threading.Event()
+        self.owner = None
+
+    def abortRequested(self):
+        return self._abort.is_set()
+
+    def waitForAbort(self, timeout=0):
+        return self._abort.wait(timeout or 0)
+
+    def onSettingsChanged(self):
+        if self.owner is not None:
+            self.owner.notify_settings_changed()
+
+    def abort(self):
+        self._abort.set()
 
 
 class PluginState:
@@ -157,6 +195,8 @@ class PluginState:
         self.logs = []
         self.notifications = FakeDialog.notifications
         self.keyboard_instances = FakeKeyboard.instances
+        self.jsonrpc_calls = []
+        self.jsonrpc_result = '{"jsonrpc":"2.0","result":"OK","id":1}'
 
 
 def _install_fakes():
@@ -170,11 +210,18 @@ def _install_fakes():
     xbmc.LOGERROR = 3
     xbmc.LOGFATAL = 4
     xbmc.Keyboard = FakeKeyboard
+    xbmc.Monitor = FakeMonitor
 
     def log(message, level=xbmc.LOGINFO):
         state.logs.append((level, str(message)))
 
     xbmc.log = log
+
+    def executeJSONRPC(payload):
+        state.jsonrpc_calls.append(payload)
+        return state.jsonrpc_result
+
+    xbmc.executeJSONRPC = executeJSONRPC
 
     xbmcgui = types.ModuleType("xbmcgui")
     xbmcgui.ListItem = FakeListItem
@@ -274,6 +321,8 @@ def pytest_runtest_setup(item):
     KODI.logs.clear()
     KODI.notifications.clear()
     KODI.sort_methods.clear()
+    KODI.jsonrpc_calls.clear()
+    KODI.jsonrpc_result = '{"jsonrpc":"2.0","result":"OK","id":1}'
     FakeKeyboard.instances.clear()
     FakeKeyboard.next_text = ""
     FakeKeyboard.next_confirmed = False
