@@ -256,6 +256,36 @@ def test_catalog_pagination_next_stays_last():
     assert labels() == ["Last item"]
 
 
+def test_gustavo_animation_catalog_routes_vods_not_serials():
+    api = ScriptedApi()
+    api.catalog_payload = load_fixture("catalog_gustavo_animation.json")
+    run_plugin("route=catalog&main_ids=268&category_id=307", api)
+    ended_once(True)
+    assert api.calls == [
+        (
+            "get_catalog",
+            {
+                "main_category_ids": [268],
+                "category_ids": [307],
+                "first_result": 0,
+                "max_results": PAGE_SIZE,
+            },
+        )
+    ]
+    assert all(name != "get_serial_seasons" for name, _params in api.calls)
+    assert labels() == ["Gustavo nuotykiai", "Kaimiečiai"]
+    assert [row["is_folder"] for row in KODI.directory_items] == [False, False]
+    assert [row["listitem"].properties.get("IsPlayable") for row in KODI.directory_items] == [
+        "true",
+        "true",
+    ]
+    assert queries() == [
+        {"route": "play", "product_id": "429850", "item_type": "VOD"},
+        {"route": "play", "product_id": "946618", "item_type": "VOD"},
+    ]
+    assert KODI.content == "movies"
+
+
 def test_serial_season_episode_urls_flags_and_media_types():
     api = run_plugin("route=catalog&main_ids=304")
     assert KODI.content == "tvshows"

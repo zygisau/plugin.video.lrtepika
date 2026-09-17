@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "totalCount": 2,
+    "firstResult": 0,
+    "maxResults": 30
+  },
+  "items": [
+    {
+      "id": 429850,
+      "title": "Gustavo nuotykiai",
+      "lead": "Animated adventure film",
+      "type": "VOD",
+      "year": 2014,
+      "duration": 5836,
+      "mainCategory": {"id": 268, "name": "Vaidybiniai filmai"},
+      "categories": [{"id": 307, "name": "Animacinis"}],
+      "images": {
+        "3x4": [{"url": "//cdn.example.test/gustavo-poster.jpg"}],
+        "16x9": [{"url": "//cdn.example.test/gustavo-wide.jpg"}]
+      }
+    },
+    {
+      "id": 946618,
+      "title": "Kaimiečiai",
+      "lead": "Animated village drama",
+      "type": "VOD",
+      "year": 2023,
+      "duration": 6922,
+      "mainCategory": {"id": 268, "name": "Vaidybiniai filmai"},
+      "categories": [{"id": 307, "name": "Animacinis"}],
+      "images": {
+        "3x4": [{"url": "//cdn.example.test/kaimieciai-poster.jpg"}],
+        "16x9": [{"url": "//cdn.example.test/kaimieciai-wide.jpg"}]
+      }
+    }
+  ]
+}
