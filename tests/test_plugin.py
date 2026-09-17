@@ -67,6 +67,7 @@ class ScriptedApi:
         self.seasons_payload = load_fixture("seasons.json")
         self.episodes_payload = load_fixture("episodes.json")
         self.playlist_payload = load_fixture("playlist_dash_drm.json")
+        self.playlist_payloads = {}
 
     def _maybe_raise(self):
         if self.error is not None:
@@ -112,6 +113,11 @@ class ScriptedApi:
         if self.playlist_error is not None:
             raise self.playlist_error
         self._maybe_raise()
+        if video_type in self.playlist_payloads:
+            payload = self.playlist_payloads[video_type]
+            if isinstance(payload, Exception):
+                raise payload
+            return payload
         return self.playlist_payload
 
 
@@ -375,6 +381,24 @@ def test_episode_playlist_uses_episode_type():
     run_plugin("route=play&product_id=1263987&item_type=EPISODE", api)
     resolved_once(True)
     assert api.calls == [("get_playlist", {"product_id": 1263987, "video_type": "EPISODE"})]
+
+
+def test_episode_playlist_retries_movie_after_episode_error():
+    api = ScriptedApi()
+    api.playlist_payloads = {
+        "EPISODE": ApiError("get_playlist", "HTTP 404", status=404),
+        "MOVIE": load_fixture("playlist_dash_drm.json"),
+    }
+    run_plugin("route=play&product_id=1263987&item_type=EPISODE", api)
+    resolved_once(True)
+    assert api.calls == [
+        ("get_playlist", {"product_id": 1263987, "video_type": "EPISODE"}),
+        ("get_playlist", {"product_id": 1263987, "video_type": "MOVIE"}),
+    ]
+    item = KODI.resolved[0]["listitem"]
+    assert item.path == "https://cdn.example.test/movie.mpd"
+    assert item.properties["inputstream.adaptive.license_type"] == "com.widevine.alpha"
+    logs_are_safe()
 
 
 def test_non_drm_hls_fallback():

@@ -21,6 +21,7 @@ Live public API notes used by the client (documented deviations from the retired
 - Catalog and search responses use `{ "meta": { totalCount, firstResult, maxResults }, "items": [...] }`
 - Section payloads expose `elements`, not `items`
 - Playable movies are typed `VOD` (playlist `videoType` remains `MOVIE`)
+- Episode items still request `videoType=EPISODE` first; live Epika currently 404s that type and serves the same assets with `videoType=MOVIE`, so playback retries `MOVIE`
 - Playlist DRM objects use uppercase keys such as `WIDEVINE.src`
 
 Still arriving in later slices of this branch:

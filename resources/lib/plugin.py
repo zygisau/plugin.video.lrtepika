@@ -401,7 +401,7 @@ class Plugin:
         if product_id is None or video_type is None:
             self._fail_play("unsupported item type")
             return
-        playlist = parse_playlist(self.api.get_playlist(product_id, video_type))
+        playlist = parse_playlist(self._load_playlist(product_id, video_type))
         if playlist is None:
             self._fail_play("no playlist")
             return
@@ -427,6 +427,17 @@ class Plugin:
         if playlist.subtitles:
             listitem.setSubtitles(list(playlist.subtitles))
         xbmcplugin.setResolvedUrl(self.handle, True, listitem)
+
+    def _load_playlist(self, product_id: int, video_type: str):
+        try:
+            return self.api.get_playlist(product_id, video_type)
+        except ApiError:
+            if video_type != "EPISODE":
+                raise
+            # Live Epika currently 404s videoType=EPISODE and serves episode
+            # assets with videoType=MOVIE. Keep the planned type first.
+            _log("episode playlist unavailable, retrying movie type", xbmc.LOGINFO)
+            return self.api.get_playlist(product_id, "MOVIE")
 
 
 def _select_stream(playlist) -> tuple[str | None, str | None, str | None]:
