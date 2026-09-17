@@ -83,7 +83,7 @@ def make_app(recorder=None, clock=None, resolver=None):
         clock=clock,
         log=recorder.log,
         is_accepting=recorder.is_accepting,
-        version="0.2.0",
+        version="0.2.1",
     ), recorder, clock
 
 
@@ -142,7 +142,7 @@ def test_send_and_health_success():
 
     response, payload = call(app, method="GET", path="/v1/health")
     assert response.status == 200
-    assert payload == {"ok": True, "service": "lrtepika-send", "version": "0.2.0"}
+    assert payload == {"ok": True, "service": "lrtepika-send", "version": "0.2.1"}
 
 
 def test_four_kinds_dispatch_actions():

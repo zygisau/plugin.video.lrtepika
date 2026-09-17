@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_build_creates_single_wrapper_zip(tmp_path):
     artifact = build_zip(root=ROOT, dist_dir=tmp_path)
-    assert artifact.name == "plugin.video.lrtepika-0.2.0.zip"
+    assert artifact.name == "plugin.video.lrtepika-0.2.1.zip"
     validate_zip(artifact)
 
     with zipfile.ZipFile(artifact) as zf:
@@ -65,7 +65,7 @@ def test_build_creates_single_wrapper_zip(tmp_path):
         english = zf.read(f"{ADDON_ID}/resources/language/resource.language.en_gb/strings.po").decode("utf-8")
         lithuanian = zf.read(f"{ADDON_ID}/resources/language/resource.language.lt_lt/strings.po").decode("utf-8")
     assert 'id="plugin.video.lrtepika"' in addon_xml
-    assert 'version="0.2.0"' in addon_xml
+    assert 'version="0.2.1"' in addon_xml
     assert 'point="xbmc.service"' in addon_xml
     assert 'library="service.py"' in addon_xml
     assert "plugin.video.example" not in addon_xml

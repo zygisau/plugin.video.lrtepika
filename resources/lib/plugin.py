@@ -32,6 +32,8 @@ from resources.lib.directory import (
     parse_playlist,
     parse_search_page,
     parse_sections,
+    select_spotlight_items,
+    spotlight_spec,
 )
 from resources.lib.history import HISTORY_FILENAME, HISTORY_LIMIT, add_history, load_history, normalize_term
 
@@ -135,6 +137,7 @@ class Plugin:
             None: self.list_root,
             "featured": self.list_featured,
             "section": self.list_section,
+            "spotlight": self.list_spotlight,
             "movies": self.list_movies_hub,
             "series": self.list_series_hub,
             "genres": self.list_genres,
@@ -258,12 +261,28 @@ class Plugin:
         self._set_heading("LRT Epika", "files")
         self._add_items(
             [
-                self._folder("Featured", self.url(route="featured", section_name=FEATURED_SECTION)),
-                self._folder("Movies", self.url(route="movies")),
-                self._folder("Series", self.url(route="series")),
+                self._folder("Serialai", self.url(route="series")),
+                self._folder("Filmai", self.url(route="movies")),
                 self._folder("Search", self.url(route="search")),
             ]
         )
+
+    def list_spotlight(self) -> None:
+        spec = spotlight_spec(self.params.get("kind"))
+        if spec is None:
+            raise ApiError("dispatch", "invalid kind")
+        section_name, item_type, content = spec
+        title = "Serialai" if item_type == "SERIAL" else "Filmai"
+        self._set_heading(title, content)
+        try:
+            sections = parse_sections(self.api.get_sections(section_name))
+        except ApiError as exc:
+            _log(str(exc))
+            return
+        items = select_spotlight_items(sections, item_type)
+        if not items:
+            return
+        self._add_items([self._entry(item) for item in items])
 
     def list_featured(self) -> None:
         section_name = self.params.get("section_name") or FEATURED_SECTION

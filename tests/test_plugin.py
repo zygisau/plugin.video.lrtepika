@@ -194,15 +194,16 @@ def logs_are_safe() -> None:
 def test_root_order_and_urls():
     run_plugin("")
     ended_once(True)
-    assert labels() == ["Featured", "Movies", "Series", "Search"]
-    assert [row["is_folder"] for row in KODI.directory_items] == [True, True, True, True]
+    assert labels() == ["Serialai", "Filmai", "Search"]
+    assert [row["is_folder"] for row in KODI.directory_items] == [True, True, True]
     assert queries() == [
-        {"route": "featured", "section_name": "main"},
-        {"route": "movies"},
         {"route": "series"},
+        {"route": "movies"},
         {"route": "search"},
     ]
     assert all("route=root" not in url for url in urls())
+    assert all("route=featured" not in url for url in urls())
+    assert "Featured" not in labels()
     assert KODI.plugin_category == "LRT Epika"
     assert KODI.sort_methods == []
 
@@ -229,6 +230,128 @@ def test_featured_uses_stable_section_id():
     assert item["is_folder"] is True
     assert item["listitem"].getVideoInfoTag().media_type == "tvshow"
     assert query(item["url"]) == {"route": "serial", "serial_id": "2001", "title": "Featured serial"}
+
+
+def _spotlight_item(item_id: int, item_type: str, title: str) -> dict:
+    return {
+        "id": item_id,
+        "title": title,
+        "lead": f"{title} plot",
+        "type": item_type,
+        "year": 2024,
+        "images": {"3x4": [{"url": f"https://cdn.example.test/{item_id}.jpg"}]},
+    }
+
+
+def _spotlight_section(section_id: int, title: str, items: list[dict]) -> dict:
+    return {
+        "id": section_id,
+        "title": title,
+        "type": "SECTION",
+        "elements": [{"id": index, "item": item} for index, item in enumerate(items, 1)],
+    }
+
+
+def test_spotlight_series_keeps_serial_folders_in_editorial_order():
+    api = ScriptedApi()
+    api.section_payloads["serialai"] = [
+        _spotlight_section(
+            1,
+            "New series",
+            [
+                _spotlight_item(11, "SERIAL", "Alpha serial"),
+                _spotlight_item(90, "VOD", "Movie in series feed"),
+                _spotlight_item(11, "SERIAL", "Alpha serial duplicate"),
+                _spotlight_item(12, "SERIAL", "Beta serial"),
+            ],
+        ),
+        _spotlight_section(
+            2,
+            "Kids",
+            [
+                _spotlight_item(12, "SERIAL", "Beta serial again"),
+                _spotlight_item(13, "SERIAL", "Gamma serial"),
+            ],
+        ),
+    ]
+    run_plugin("route=spotlight&kind=series", api)
+    ended_once(True)
+    assert api.calls == [("get_sections", {"section_name": "serialai", "elements_limit": PAGE_SIZE})]
+    assert labels() == ["Alpha serial", "Beta serial", "Gamma serial"]
+    assert "New series" not in labels()
+    assert "Kids" not in labels()
+    assert "Next page" not in labels()
+    assert [row["is_folder"] for row in KODI.directory_items] == [True, True, True]
+    assert [row["listitem"].properties.get("IsPlayable") for row in KODI.directory_items] == [None, None, None]
+    assert [row["listitem"].getVideoInfoTag().media_type for row in KODI.directory_items] == [
+        "tvshow",
+        "tvshow",
+        "tvshow",
+    ]
+    assert queries() == [
+        {"route": "serial", "serial_id": "11", "title": "Alpha serial"},
+        {"route": "serial", "serial_id": "12", "title": "Beta serial"},
+        {"route": "serial", "serial_id": "13", "title": "Gamma serial"},
+    ]
+    assert KODI.content == "tvshows"
+    assert KODI.plugin_category == "Serialai"
+    assert KODI.sort_methods == []
+    assert KODI.notifications == []
+
+
+def test_spotlight_movies_keeps_playable_vods_and_bounds_the_feed():
+    movies = [_spotlight_item(index, "VOD", f"Movie {index}") for index in range(1, 16)]
+    movies.insert(1, _spotlight_item(500, "SERIAL", "Serial in movies feed"))
+    movies.insert(3, _spotlight_item(1, "VOD", "Movie 1 duplicate"))
+    api = ScriptedApi()
+    api.section_payloads["filmai"] = [
+        _spotlight_section(10, "TOP", movies[:9]),
+        _spotlight_section(11, "New films", movies[9:]),
+    ]
+    run_plugin("route=spotlight&kind=movies", api)
+    ended_once(True)
+    assert api.calls == [("get_sections", {"section_name": "filmai", "elements_limit": PAGE_SIZE})]
+    assert labels() == [f"Movie {index}" for index in range(1, 11)]
+    assert "TOP" not in labels()
+    assert "New films" not in labels()
+    assert "Next page" not in labels()
+    assert "Serial in movies feed" not in labels()
+    assert [row["is_folder"] for row in KODI.directory_items] == [False] * 10
+    assert [row["listitem"].properties.get("IsPlayable") for row in KODI.directory_items] == ["true"] * 10
+    assert [row["listitem"].getVideoInfoTag().media_type for row in KODI.directory_items] == ["movie"] * 10
+    assert queries() == [
+        {"route": "play", "product_id": str(index), "item_type": "VOD"} for index in range(1, 11)
+    ]
+    assert KODI.content == "movies"
+    assert KODI.plugin_category == "Filmai"
+    assert KODI.sort_methods == []
+    assert KODI.notifications == []
+
+
+def test_spotlight_invalid_kind_follows_unknown_route_convention():
+    api = run_plugin("route=spotlight&kind=categories")
+    ended_once(False)
+    assert api.calls == []
+    assert KODI.directory_items == []
+    assert len(KODI.notifications) == 1
+    assert KODI.notifications[0]["icon"] == "error"
+    assert "Unable to load this folder." in KODI.notifications[0]["message"]
+    assert sum("invalid kind" in message for _level, message in KODI.logs) == 1
+
+
+def test_spotlight_api_failure_is_quiet():
+    api = ScriptedApi()
+    api.error = ApiError("get_sections", "timed out")
+    run_plugin("route=spotlight&kind=series", api)
+    ended_once(True)
+    assert api.calls == [("get_sections", {"section_name": "serialai", "elements_limit": PAGE_SIZE})]
+    assert KODI.directory_items == []
+    assert KODI.notifications == []
+    assert KODI.content == "tvshows"
+    assert sum("timed out" in message for _level, message in KODI.logs) == 1
+    joined = "\n".join(message for _level, message in KODI.logs)
+    assert "cdn.example.test" not in joined
+    assert "license" not in joined.lower()
 
 
 def test_movie_and_series_hubs_and_genre_filters():
@@ -809,3 +932,32 @@ def test_live_search_results_opt_in(tmp_path):
     else:
         assert labels()
         assert load_history(history_path) == []
+
+
+@pytest.mark.live
+def test_live_spotlight_feeds_opt_in():
+    if os.environ.get("LRT_EPIKA_LIVE") != "1":
+        pytest.skip("set LRT_EPIKA_LIVE=1 for read-only live checks")
+    run(argv("route=spotlight&kind=series"))
+    ended_once(True)
+    assert KODI.content == "tvshows"
+    assert "Next page" not in labels()
+    for row in KODI.directory_items:
+        assert row["is_folder"] is True
+        assert query(row["url"])["route"] == "serial"
+        assert row["listitem"].properties.get("IsPlayable") is None
+    assert len(KODI.directory_items) <= 10
+
+    KODI.directory_items.clear()
+    KODI.end_of_directory_calls.clear()
+    KODI.notifications.clear()
+    run(argv("route=spotlight&kind=movies"))
+    ended_once(True)
+    assert KODI.content == "movies"
+    assert "Next page" not in labels()
+    for row in KODI.directory_items:
+        assert row["is_folder"] is False
+        assert row["listitem"].properties.get("IsPlayable") == "true"
+        assert query(row["url"])["item_type"] == "VOD"
+        assert query(row["url"])["route"] == "play"
+    assert len(KODI.directory_items) <= 10

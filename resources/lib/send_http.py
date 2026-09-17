@@ -25,7 +25,7 @@ from resources.lib.send_reference import (
 )
 
 SERVICE_NAME = "lrtepika-send"
-SERVICE_VERSION = "0.2.0"
+SERVICE_VERSION = "0.2.1"
 MAX_BODY_BYTES = 2048
 MAX_AUTH_BYTES = 256
 MIN_TOKEN_BYTES = 32

@@ -6,13 +6,14 @@ This repository is **not affiliated with or endorsed by LRT**. All catalog and s
 
 ## Status
 
-Version `0.2.0` adds an optional, **default-disabled** Send-to-Epika listener. Version `0.1.0` remains the first catalog/playback release of `plugin.video.lrtepika`.
+Version `0.2.1` adds home-screen spotlight feeds and changes the plugin root to Serialai, Filmai, and Search. Version `0.2.0` added the optional, **default-disabled** Send-to-Epika listener. Version `0.1.0` remains the first catalog/playback release of `plugin.video.lrtepika`.
 
 Implemented in the current branch slice:
 
 - Add-on identity, MIT license, and clean ZIP packaging
 - Thin `requests` API client and pure directory mapping helpers
-- Root navigation: Featured, Movies, Series, and Search
+- Root navigation: Serialai, Filmai, and Search
+- Hidden home spotlight feeds for series and movies, plus retained Featured/section deep links
 - Offset pagination and serial → season → episode drill-down
 - Search keyboard, typed VOD / SERIAL / EPISODE results, and recent-term history
 - Playback: DASH / Widevine, with non-DRM HLS fallback
@@ -38,7 +39,7 @@ Live public API notes used by the client (documented deviations from the retired
 - A working Widevine CDM on the device for protected titles
 - Network access to `https://epika.lrt.lt/api`
 
-Anonymous browsing of the public catalog is supported. Accounts, cookies, bookmarks, concerts, and search suggestions are out of scope for 0.2.0.
+Anonymous browsing of the public catalog is supported. Accounts, cookies, bookmarks, concerts, and search suggestions are out of scope for 0.2.1.
 
 ## Artwork
 
@@ -111,7 +112,7 @@ LRT_EPIKA_LIVE=1 .venv/bin/pytest -q -m live
 The build writes a deterministic archive:
 
 ```text
-dist/plugin.video.lrtepika-0.2.0.zip
+dist/plugin.video.lrtepika-0.2.1.zip
 └── plugin.video.lrtepika/
 ```
 

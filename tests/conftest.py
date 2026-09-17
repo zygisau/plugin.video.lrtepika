@@ -138,7 +138,7 @@ class FakeAddon:
         mapping = {
             "id": self._id,
             "name": "LRT Epika",
-            "version": "0.2.0",
+            "version": "0.2.1",
             "path": str(ROOT),
             "profile": str(ROOT / "tests" / "_profile"),
             "author": "zygisau",

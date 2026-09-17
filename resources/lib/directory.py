@@ -29,6 +29,11 @@ SERIES_MAIN_CATEGORY_IDS: tuple[int, ...] = tuple(item[0] for item in SERIES_MAI
 FEATURED_SECTION = "main"
 MOVIES_FEATURED_SECTION = "filmai"
 SERIES_FEATURED_SECTION = "serialai"
+SPOTLIGHT_LIMIT = 10
+SPOTLIGHT_KIND_SPECS = {
+    "series": ("serialai", "SERIAL", "tvshows"),
+    "movies": ("filmai", "VOD", "movies"),
+}
 
 TYPE_META = {
     "VOD": {"content": "movies", "media_type": "movie", "is_playable": True, "is_folder": False},
@@ -383,6 +388,36 @@ def find_section(sections: Sequence[SectionView], section_id: Any) -> SectionVie
         if section.id == wanted:
             return section
     return None
+
+
+def spotlight_spec(kind: Any) -> tuple[str, str, str] | None:
+    if not isinstance(kind, str):
+        return None
+    return SPOTLIGHT_KIND_SPECS.get(kind)
+
+
+def select_spotlight_items(
+    sections: Sequence[SectionView],
+    item_type: str,
+    limit: int = SPOTLIGHT_LIMIT,
+) -> tuple[DirectoryItem, ...]:
+    """Walk sections/elements in API order, keep one type, dedupe, cap the feed."""
+    if limit <= 0:
+        return ()
+    selected: list[DirectoryItem] = []
+    seen: set[tuple[str, int]] = set()
+    for section in sections:
+        for item in section.items:
+            if item.type != item_type:
+                continue
+            key = (item.type, item.id)
+            if key in seen:
+                continue
+            seen.add(key)
+            selected.append(item)
+            if len(selected) >= limit:
+                return tuple(selected)
+    return tuple(selected)
 
 
 def _first_stream(sources: Mapping[str, Any], key: str) -> str | None:

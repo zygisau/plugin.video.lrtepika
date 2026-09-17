@@ -8,6 +8,7 @@ from pathlib import Path
 
 from resources.lib.directory import (
     PAGE_SIZE,
+    SPOTLIGHT_LIMIT,
     find_section,
     has_next_page,
     map_item,
@@ -16,6 +17,8 @@ from resources.lib.directory import (
     parse_playlist,
     parse_search_page,
     parse_sections,
+    select_spotlight_items,
+    spotlight_spec,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -230,3 +233,83 @@ def test_map_item_ignores_invalid_year_and_blank_urls():
     assert item.year is None
     assert item.duration is None
     assert item.art["thumb"] is None
+
+
+def _spotlight_item(item_id: int, item_type: str, title: str) -> dict:
+    return {
+        "id": item_id,
+        "title": title,
+        "lead": f"{title} plot",
+        "type": item_type,
+        "year": 2024,
+        "images": {"3x4": [{"url": f"https://cdn.example.test/{item_id}.jpg"}]},
+    }
+
+
+def _spotlight_section(section_id: int, title: str, items: list[dict]) -> dict:
+    return {
+        "id": section_id,
+        "title": title,
+        "type": "SECTION",
+        "elements": [{"id": index, "item": item} for index, item in enumerate(items, 1)],
+    }
+
+
+def test_spotlight_spec_and_selector_filters_order_dedupe_and_bound():
+    assert spotlight_spec("series") == ("serialai", "SERIAL", "tvshows")
+    assert spotlight_spec("movies") == ("filmai", "VOD", "movies")
+    assert spotlight_spec("categories") is None
+    assert spotlight_spec("") is None
+    assert spotlight_spec(None) is None
+
+    serial_sections = parse_sections(
+        [
+            _spotlight_section(
+                1,
+                "New series",
+                [
+                    _spotlight_item(101, "SERIAL", "First serial"),
+                    _spotlight_item(201, "VOD", "Movie in series row"),
+                    _spotlight_item(101, "SERIAL", "Duplicate serial"),
+                    _spotlight_item(102, "SERIAL", "Second serial"),
+                ],
+            ),
+            _spotlight_section(
+                2,
+                "Kids",
+                [
+                    _spotlight_item(102, "SERIAL", "Second serial again"),
+                    _spotlight_item(103, "SERIAL", "Third serial"),
+                    _spotlight_item(301, "EPISODE", "Episode in series row"),
+                ],
+            ),
+        ]
+    )
+    serials = select_spotlight_items(serial_sections, "SERIAL")
+    assert [item.id for item in serials] == [101, 102, 103]
+    assert [item.title for item in serials] == ["First serial", "Second serial", "Third serial"]
+    assert all(item.type == "SERIAL" for item in serials)
+    assert all(item.is_folder is True and item.is_playable is False for item in serials)
+    assert all(item.content == "tvshows" for item in serials)
+
+    movie_items = [_spotlight_item(index, "VOD", f"Movie {index}") for index in range(1, 16)]
+    movie_items.insert(2, _spotlight_item(99, "SERIAL", "Serial in movies row"))
+    movie_items.insert(4, _spotlight_item(1, "VOD", "Duplicate movie"))
+    movie_sections = parse_sections(
+        [
+            _spotlight_section(10, "TOP", movie_items[:8]),
+            _spotlight_section(11, "New films", movie_items[8:]),
+        ]
+    )
+    movies = select_spotlight_items(movie_sections, "VOD")
+    assert len(movies) == SPOTLIGHT_LIMIT
+    assert [item.id for item in movies] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    assert all(item.type == "VOD" for item in movies)
+    assert all(item.is_playable is True and item.is_folder is False for item in movies)
+    assert all(item.content == "movies" for item in movies)
+    assert movies[0].art["poster"] == "https://cdn.example.test/1.jpg"
+
+    fixture_serials = select_spotlight_items(parse_sections(load_fixture("sections_serialai.json")), "SERIAL")
+    assert [item.title for item in fixture_serials] == ["New serial"]
+    fixture_movies = select_spotlight_items(parse_sections(load_fixture("sections_filmai.json")), "VOD")
+    assert [item.title for item in fixture_movies] == ["Top film"]
