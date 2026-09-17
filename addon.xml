@@ -1,27 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.example"
-version="3.0.3"
-name="Example Kodi Video Plugin"
-provider-name="Roman_V_M">
-<requires>
-  <import addon="xbmc.python" version="3.0.1"/>
-  <import addon="script.module.requests" version="2.31.0"/>
-  <import addon="inputstream.adaptive" version="20.3.18"/>
-</requires>
-<extension point="xbmc.python.pluginsource" library="main.py">
-  <provides>video</provides>
-</extension>
-<extension point="xbmc.addon.metadata">
-  <summary lang="en_GB">Example Kodi Video Plugin</summary>
-  <description lang="en_GB">An example video plugin for Kodi mediacenter.</description>
-  <disclaimer lang="en_GB">Public domain movies are provided by publicdomainmovie.net.</disclaimer>
-  <license>GPL-3.0-only </license>
-  <assets>
-    <icon>resources/images/icon.png</icon>
-    <fanart>resources/images/fanart.jpg</fanart>
-    <screenshot>resources/images/screenshot-1.jpg</screenshot>
-    <screenshot>resources/images/screenshot-2.jpg</screenshot>
-  </assets>
-  <news>Updated with latest artwork metadata</news>
-</extension>
+<addon id="plugin.video.lrtepika"
+       name="LRT Epika"
+       version="0.1.0"
+       provider-name="zygisau">
+  <requires>
+    <import addon="xbmc.python" version="3.0.1"/>
+    <import addon="script.module.requests" version="2.31.0"/>
+    <import addon="inputstream.adaptive" version="20.3.18"/>
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="main.py">
+    <provides>video</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">LRT Epika movies and series</summary>
+    <summary lang="lt_LT">LRT Epikos filmai ir serialai</summary>
+    <description lang="en_GB">Unofficial Kodi add-on for browsing and playing movies and series from LRT Epika, the Lithuanian National Radio and Television streaming service. Requires Kodi 20 or newer. DRM titles use inputstream.adaptive with Widevine.</description>
+    <description lang="lt_LT">Neoficialus Kodi papildinys LRT Epikos filmams ir serialams žiūrėti. Reikalingas Kodi 20 ar naujesnis. DRM turiniui naudojamas inputstream.adaptive ir Widevine.</description>
+    <disclaimer lang="en_GB">This add-on is not affiliated with or endorsed by LRT. All streamed content belongs to LRT. Some titles are geo-restricted or require Widevine DRM.</disclaimer>
+    <platform>all</platform>
+    <license>MIT</license>
+    <source>https://github.com/zygisau/plugin.video.lrtepika</source>
+    <assets>
+      <icon>resources/images/icon.png</icon>
+      <fanart>resources/images/fanart.jpg</fanart>
+    </assets>
+  </extension>
 </addon>
