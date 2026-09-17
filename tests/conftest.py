@@ -57,6 +57,7 @@ class FakeListItem:
         self.properties = {}
         self.subtitles = []
         self.mime_type = None
+        self.content_lookup = None
         self._info_tag = FakeInfoTag()
 
     def setLabel(self, label):
@@ -76,6 +77,9 @@ class FakeListItem:
 
     def setMimeType(self, mime_type):
         self.mime_type = mime_type
+
+    def setContentLookup(self, enabled):
+        self.content_lookup = enabled
 
     def getVideoInfoTag(self):
         return self._info_tag
@@ -97,12 +101,15 @@ class FakeDialog:
 
 
 class FakeKeyboard:
+    instances = []
+
     def __init__(self, default="", heading="", hidden=False):
         self.default = default
         self.heading = heading
         self.hidden = hidden
         self._text = default
         self._confirmed = False
+        FakeKeyboard.instances.append(self)
 
     def doModal(self):
         return None
@@ -147,6 +154,7 @@ class PluginState:
         self.sort_methods = []
         self.logs = []
         self.notifications = FakeDialog.notifications
+        self.keyboard_instances = FakeKeyboard.instances
 
 
 def _install_fakes():
@@ -177,6 +185,7 @@ def _install_fakes():
     xbmcplugin.SORT_METHOD_LABEL_IGNORE_THE = 1
     xbmcplugin.SORT_METHOD_VIDEO_YEAR = 2
     xbmcplugin.SORT_METHOD_NONE = 0
+    xbmcplugin.SORT_METHOD_UNSORTED = 3
 
     def addDirectoryItem(handle, url, listitem, isFolder=False, totalItems=0):
         state.directory_items.append(
@@ -189,6 +198,13 @@ def _install_fakes():
             }
         )
         return True
+
+    def addDirectoryItems(handle, items, totalItems=0):
+        ok = True
+        for item in items:
+            url, listitem, is_folder = item
+            ok = addDirectoryItem(handle, url, listitem, is_folder, totalItems) and ok
+        return ok
 
     def endOfDirectory(handle, succeeded=True, updateListing=False, cacheToDisc=True):
         state.end_of_directory_calls.append(
@@ -215,6 +231,7 @@ def _install_fakes():
         state.sort_methods.append(sortMethod)
 
     xbmcplugin.addDirectoryItem = addDirectoryItem
+    xbmcplugin.addDirectoryItems = addDirectoryItems
     xbmcplugin.endOfDirectory = endOfDirectory
     xbmcplugin.setResolvedUrl = setResolvedUrl
     xbmcplugin.setPluginCategory = setPluginCategory
@@ -255,5 +272,6 @@ def pytest_runtest_setup(item):
     KODI.logs.clear()
     KODI.notifications.clear()
     KODI.sort_methods.clear()
+    FakeKeyboard.instances.clear()
     KODI.plugin_category = None
     KODI.content = None

@@ -12,6 +12,9 @@ Implemented in the current branch slice:
 
 - Add-on identity, MIT license, and clean ZIP packaging
 - Thin `requests` API client and pure directory mapping helpers
+- Root navigation: Featured, Movies, Series, and a Search placeholder
+- Offset pagination and serial → season → episode drill-down
+- Playback: DASH / Widevine, with non-DRM HLS fallback
 
 Live public API notes used by the client (documented deviations from the retired OpenAPI file):
 
@@ -22,9 +25,7 @@ Live public API notes used by the client (documented deviations from the retired
 
 Still arriving in later slices of this branch:
 
-- Root navigation: Featured, Movies, Series, Search
-- Offset pagination and serial → season → episode drill-down
-- Search history and playback (DASH / Widevine, non-DRM HLS fallback)
+- Search keyboard, typed results, and profile search history
 
 ## Requirements
 
